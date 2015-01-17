@@ -97,7 +97,7 @@ void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, flo
 #define L3GD20_ADDRESS                (0x6B)        // 1101011
 #define L3GD20_ID                     0xD4
 #define L3GD20H_ID                    0xD7
-#define L3GD20_SCALE                  0.001//0.00875F
+#define L3GD20_SCALE                  0.00875f  // mdps/LSB
 
 typedef enum
 {                                               // DEFAULT    TYPE
@@ -184,6 +184,15 @@ void setup(){
   }
 }
 
+// loop timing
+unsigned long lastMillis;
+unsigned int sampleCount;
+unsigned int periodCount;
+float cumulativeX, cumulativeY, cumulativeZ;
+float avgX, avgY, avgZ;
+
+#define INTERVAL 100 // ms between averaging
+
 void loop(){
   // int r = analogRead(A0);
   // Serial.print("A0: ");
@@ -205,23 +214,36 @@ void loop(){
   yhi = Wire.read();
   zlo = Wire.read();
   zhi = Wire.read();
-  int axisX = (xlo | (xhi << 8));
-  int axisY = (ylo | (yhi << 8));
-  int axisZ = (zlo | (zhi << 8));
-  axisX *= L3GD20_SCALE;
-  axisY *= L3GD20_SCALE;
-  axisZ *= L3GD20_SCALE;
+  float sampleX = (int)(xlo | (xhi << 8));
+  float sampleY = (int)(ylo | (yhi << 8));
+  float sampleZ = (int)(zlo | (zhi << 8));
+  sampleX *= L3GD20_SCALE;
+  sampleY *= L3GD20_SCALE;
+  sampleZ *= L3GD20_SCALE;
   
-  Serial.print("X: "); Serial.print(axisX);
-  Serial.print("\t\tY: "); Serial.print(axisY);
-  Serial.print("\t\tZ: "); Serial.println(axisZ);
-//  Serial.print("X: "); Serial.print(xhi, HEX);  Serial.print(xlo, HEX);
-//  Serial.print("\t\tY: "); Serial.print(yhi, HEX);  Serial.print(ylo, HEX);
-//  Serial.print("\t\tZ: "); Serial.print(zhi, HEX);  Serial.println(zlo, HEX);
-
+  // sample smoothing
+  cumulativeX += sampleX;
+  cumulativeY += sampleY;
+  cumulativeZ += sampleZ;
+  sampleCount++;
+  if(millis() > lastMillis + INTERVAL){
+    lastMillis = millis();
+    avgX = cumulativeX/sampleCount;
+    avgY = cumulativeY/sampleCount;
+    avgZ = cumulativeZ/sampleCount;
+    Serial.print(sampleCount);  Serial.print("  ");
+    Serial.print("X: ");        Serial.print(avgX); // Serial.print("  ");  Serial.print(cumulativeX);  
+    Serial.print(" \t\tY: ");   Serial.print(avgY); // Serial.print("  ");  Serial.print(cumulativeY);  
+    Serial.print(" \t\tZ: ");   Serial.println(avgZ); // Serial.print("  ");  Serial.println(cumulativeZ);  
+    sampleCount = cumulativeX = cumulativeY = cumulativeZ = 0;
+  }
 
 //  MadgwickAHRSupdateIMU(xAccel, yAccel, zAccel, gyro.data.x / 300.0, gyro.data.y / 300.0, gyro.data.z / 300.0);
 
+  
+//    Serial.print("X: ");        Serial.print(sampleX);  
+//    Serial.print("   \t\tY: "); Serial.print(sampleY); 
+//    Serial.print("   \t\tZ: "); Serial.println(sampleZ);
+//    delay(100);
 
-  delay(100);
 }
