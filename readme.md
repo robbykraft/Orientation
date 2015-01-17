@@ -2,8 +2,9 @@
 
 Sebastian Madgwick's IMU function on minimal hardware
 
-presently:
+* gyroscope L3GD20H over I2C
+* accelerometer ADXL335
 
-* Arduino
-* gyroscope (Adafruit L3GD20H)
-* accelerometer (Adafruit ADXL335)
+# Platforms so far
+
+Arduino

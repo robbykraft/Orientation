@@ -1,226 +1,227 @@
-#include <Wire.h> 
+#include <Wire.h>
 #include <math.h>
-#include <Adafruit_L3GD20.h>
 
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
 
 float invSqrt(float x) {
-	float halfx = 0.5f * x;
-	float y = x;
-	long i = *(long*)&y;
-	i = 0x5f3759df - (i>>1);
-	y = *(float*)&i;
-	y = y * (1.5f - (halfx * y * y));
-	return y;
+  float halfx = 0.5f * x;
+  float y = x;
+  long i = *(long*)&y;
+  i = 0x5f3759df - (i>>1);
+  y = *(float*)&i;
+  y = y * (1.5f - (halfx * y * y));
+  return y;
 }
 
 // Implementation of Madgwick's IMU and AHRS algorithms.
 // See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
-#define sampleFreq	512.0f		// sample frequency in Hz
-#define betaDef		0.1f		// 2 * proportional gain
+#define sampleFreq  512.0f    // sample frequency in Hz
+#define betaDef   0.1f    // 2 * proportional gain
 
-volatile float beta = betaDef;								// 2 * proportional gain (Kp)
-volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;	// quaternion of sensor frame relative to auxiliary frame
+volatile float beta = betaDef;                // 2 * proportional gain (Kp)
+volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;  // quaternion of sensor frame relative to auxiliary frame
 
 void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az) {
-	float recipNorm;
-	float s0, s1, s2, s3;
-	float qDot1, qDot2, qDot3, qDot4;
-	float _2q0, _2q1, _2q2, _2q3, _4q0, _4q1, _4q2 ,_8q1, _8q2, q0q0, q1q1, q2q2, q3q3;
+  float recipNorm;
+  float s0, s1, s2, s3;
+  float qDot1, qDot2, qDot3, qDot4;
+  float _2q0, _2q1, _2q2, _2q3, _4q0, _4q1, _4q2 ,_8q1, _8q2, q0q0, q1q1, q2q2, q3q3;
 
-	// Rate of change of quaternion from gyroscope
-	qDot1 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz);
-	qDot2 = 0.5f * (q0 * gx + q2 * gz - q3 * gy);
-	qDot3 = 0.5f * (q0 * gy - q1 * gz + q3 * gx);
-	qDot4 = 0.5f * (q0 * gz + q1 * gy - q2 * gx);
+  // Rate of change of quaternion from gyroscope
+  qDot1 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz);
+  qDot2 = 0.5f * (q0 * gx + q2 * gz - q3 * gy);
+  qDot3 = 0.5f * (q0 * gy - q1 * gz + q3 * gx);
+  qDot4 = 0.5f * (q0 * gz + q1 * gy - q2 * gx);
 
-	// Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-	if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
+  // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
+  if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
 
-		// Normalise accelerometer measurement
-		recipNorm = invSqrt(ax * ax + ay * ay + az * az);
-		ax *= recipNorm;
-		ay *= recipNorm;
-		az *= recipNorm;   
+    // Normalise accelerometer measurement
+    recipNorm = invSqrt(ax * ax + ay * ay + az * az);
+    ax *= recipNorm;
+    ay *= recipNorm;
+    az *= recipNorm;   
 
-		// Auxiliary variables to avoid repeated arithmetic
-		_2q0 = 2.0f * q0;
-		_2q1 = 2.0f * q1;
-		_2q2 = 2.0f * q2;
-		_2q3 = 2.0f * q3;
-		_4q0 = 4.0f * q0;
-		_4q1 = 4.0f * q1;
-		_4q2 = 4.0f * q2;
-		_8q1 = 8.0f * q1;
-		_8q2 = 8.0f * q2;
-		q0q0 = q0 * q0;
-		q1q1 = q1 * q1;
-		q2q2 = q2 * q2;
-		q3q3 = q3 * q3;
+    // Auxiliary variables to avoid repeated arithmetic
+    _2q0 = 2.0f * q0;
+    _2q1 = 2.0f * q1;
+    _2q2 = 2.0f * q2;
+    _2q3 = 2.0f * q3;
+    _4q0 = 4.0f * q0;
+    _4q1 = 4.0f * q1;
+    _4q2 = 4.0f * q2;
+    _8q1 = 8.0f * q1;
+    _8q2 = 8.0f * q2;
+    q0q0 = q0 * q0;
+    q1q1 = q1 * q1;
+    q2q2 = q2 * q2;
+    q3q3 = q3 * q3;
 
-		// Gradient decent algorithm corrective step
-		s0 = _4q0 * q2q2 + _2q2 * ax + _4q0 * q1q1 - _2q1 * ay;
-		s1 = _4q1 * q3q3 - _2q3 * ax + 4.0f * q0q0 * q1 - _2q0 * ay - _4q1 + _8q1 * q1q1 + _8q1 * q2q2 + _4q1 * az;
-		s2 = 4.0f * q0q0 * q2 + _2q0 * ax + _4q2 * q3q3 - _2q3 * ay - _4q2 + _8q2 * q1q1 + _8q2 * q2q2 + _4q2 * az;
-		s3 = 4.0f * q1q1 * q3 - _2q1 * ax + 4.0f * q2q2 * q3 - _2q2 * ay;
-		recipNorm = invSqrt(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3); // normalise step magnitude
-		s0 *= recipNorm;
-		s1 *= recipNorm;
-		s2 *= recipNorm;
-		s3 *= recipNorm;
+    // Gradient decent algorithm corrective step
+    s0 = _4q0 * q2q2 + _2q2 * ax + _4q0 * q1q1 - _2q1 * ay;
+    s1 = _4q1 * q3q3 - _2q3 * ax + 4.0f * q0q0 * q1 - _2q0 * ay - _4q1 + _8q1 * q1q1 + _8q1 * q2q2 + _4q1 * az;
+    s2 = 4.0f * q0q0 * q2 + _2q0 * ax + _4q2 * q3q3 - _2q3 * ay - _4q2 + _8q2 * q1q1 + _8q2 * q2q2 + _4q2 * az;
+    s3 = 4.0f * q1q1 * q3 - _2q1 * ax + 4.0f * q2q2 * q3 - _2q2 * ay;
+    recipNorm = invSqrt(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3); // normalise step magnitude
+    s0 *= recipNorm;
+    s1 *= recipNorm;
+    s2 *= recipNorm;
+    s3 *= recipNorm;
 
-		// Apply feedback step
-		qDot1 -= beta * s0;
-		qDot2 -= beta * s1;
-		qDot3 -= beta * s2;
-		qDot4 -= beta * s3;
-	}
+    // Apply feedback step
+    qDot1 -= beta * s0;
+    qDot2 -= beta * s1;
+    qDot3 -= beta * s2;
+    qDot4 -= beta * s3;
+  }
 
-	// Integrate rate of change of quaternion to yield quaternion
-	q0 += qDot1 * (1.0f / sampleFreq);
-	q1 += qDot2 * (1.0f / sampleFreq);
-	q2 += qDot3 * (1.0f / sampleFreq);
-	q3 += qDot4 * (1.0f / sampleFreq);
+  // Integrate rate of change of quaternion to yield quaternion
+  q0 += qDot1 * (1.0f / sampleFreq);
+  q1 += qDot2 * (1.0f / sampleFreq);
+  q2 += qDot3 * (1.0f / sampleFreq);
+  q3 += qDot4 * (1.0f / sampleFreq);
 
-	// Normalise quaternion
-	recipNorm = invSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-	q0 *= recipNorm;
-	q1 *= recipNorm;
-	q2 *= recipNorm;
-	q3 *= recipNorm;
-}
-  
-Adafruit_L3GD20 gyro;
-  
-const int xInput = A2;
-const int yInput = A1;
-const int zInput = A0;
-const int buttonPin = 2;
-
-// Raw Ranges:
-// initialize to mid-range and allow calibration to
-// find the minimum and maximum for each axis
-int xRawMin = 512;
-int xRawMax = 512;
-int yRawMin = 512;
-int yRawMax = 512;
-int zRawMin = 512;
-int zRawMax = 512;
-
-// Take multiple samples to reduce noise
-const int sampleSize = 10;
-
-void setup() 
-{
-	analogReference(EXTERNAL);
-	Serial.begin(9600);
-	if (!gyro.begin(gyro.L3DS20_RANGE_250DPS))
-	//if (!gyro.begin(gyro.L3DS20_RANGE_500DPS))
-	//if (!gyro.begin(gyro.L3DS20_RANGE_2000DPS))
-	{
-		Serial.println("Oops ... unable to initialize the L3GD20. Check your wiring!");
-		while (1);
-	}
+  // Normalise quaternion
+  recipNorm = invSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+  q0 *= recipNorm;
+  q1 *= recipNorm;
+  q2 *= recipNorm;
+  q3 *= recipNorm;
 }
 
-void loop() 
-{
-	int xRaw = ReadAxis(xInput);
-	int yRaw = ReadAxis(yInput);
-	int zRaw = ReadAxis(zInput);
 
-	if (millis() < 5000){
-		AutoCalibrate(xRaw, yRaw, zRaw);
-	}
-	else{
-//		Serial.print("Raw Ranges: X: ");
-//		Serial.print(xRawMin);
-//		Serial.print("-");
-//		Serial.print(xRawMax);
-//    
-//		Serial.print(", Y: ");
-//		Serial.print(yRawMin);
-//		Serial.print("-");
-//		Serial.print(yRawMax);
-//    
-//		Serial.print(", Z: ");
-//		Serial.print(zRawMin);
-//		Serial.print("-");
-//		Serial.print(zRawMax);
-//		Serial.println();
-//		Serial.print(xRaw);
-//		Serial.print(", ");
-//		Serial.print(yRaw);
-//		Serial.print(", ");
-//		Serial.print(zRaw);
+
+// bits of acode from L3GD20 library by KTOWN for Adafruit
+
+#define L3GD20_ADDRESS                (0x6B)        // 1101011
+#define L3GD20_ID                     0xD4
+#define L3GD20H_ID                    0xD7
+#define L3GD20_SCALE                  0.001//0.00875F
+
+typedef enum
+{                                               // DEFAULT    TYPE
+  L3GD20_REGISTER_WHO_AM_I            = 0x0F,   // 11010100   r
+  L3GD20_REGISTER_CTRL_REG1           = 0x20,   // 00000111   rw
+  L3GD20_REGISTER_CTRL_REG2           = 0x21,   // 00000000   rw
+  L3GD20_REGISTER_CTRL_REG3           = 0x22,   // 00000000   rw
+  L3GD20_REGISTER_CTRL_REG4           = 0x23,   // 00000000   rw
+  L3GD20_REGISTER_CTRL_REG5           = 0x24,   // 00000000   rw
+  L3GD20_REGISTER_REFERENCE           = 0x25,   // 00000000   rw
+  L3GD20_REGISTER_OUT_TEMP            = 0x26,   //            r
+  L3GD20_REGISTER_STATUS_REG          = 0x27,   //            r
+  L3GD20_REGISTER_OUT_X_L             = 0x28,   //            r
+  L3GD20_REGISTER_OUT_X_H             = 0x29,   //            r
+  L3GD20_REGISTER_OUT_Y_L             = 0x2A,   //            r
+  L3GD20_REGISTER_OUT_Y_H             = 0x2B,   //            r
+  L3GD20_REGISTER_OUT_Z_L             = 0x2C,   //            r
+  L3GD20_REGISTER_OUT_Z_H             = 0x2D,   //            r
+  L3GD20_REGISTER_FIFO_CTRL_REG       = 0x2E,   // 00000000   rw
+  L3GD20_REGISTER_FIFO_SRC_REG        = 0x2F,   //            r
+  L3GD20_REGISTER_INT1_CFG            = 0x30,   // 00000000   rw
+  L3GD20_REGISTER_INT1_SRC            = 0x31,   //            r
+  L3GD20_REGISTER_TSH_XH              = 0x32,   // 00000000   rw
+  L3GD20_REGISTER_TSH_XL              = 0x33,   // 00000000   rw
+  L3GD20_REGISTER_TSH_YH              = 0x34,   // 00000000   rw
+  L3GD20_REGISTER_TSH_YL              = 0x35,   // 00000000   rw
+  L3GD20_REGISTER_TSH_ZH              = 0x36,   // 00000000   rw
+  L3GD20_REGISTER_TSH_ZL              = 0x37,   // 00000000   rw
+  L3GD20_REGISTER_INT1_DURATION       = 0x38    // 00000000   rw
+} l3gd20Registers_t;
+
+void setup(){
+  pinMode(A0, INPUT);
+  Serial.begin(9600);
+  Wire.begin();
+  
+  delay(2000);
+  Serial.println("Reqesting ID from I2C");
+  Wire.beginTransmission(L3GD20_ADDRESS);
+  Wire.write((byte)L3GD20_REGISTER_WHO_AM_I);
+  Wire.endTransmission();
+  Wire.requestFrom((byte)L3GD20_ADDRESS, (byte)1);
+  byte value = Wire.read();
+  Wire.endTransmission();
+  uint8_t id = value;
+  Serial.print("ID:"); Serial.print((byte)value, HEX);
+  if ((id != L3GD20_ID) && (id != L3GD20H_ID))
+  {
+    Serial.println("STOP. NOT CORRECT DEVICE");
+  }
+  else{
     
-		// Convert raw values to 'milli-Gs"
-		long xScaled = map(xRaw, xRawMin, xRawMax, -1000, 1000);
-		long yScaled = map(yRaw, yRawMin, yRawMax, -1000, 1000);
-		long zScaled = map(zRaw, zRawMin, zRawMax, -1000, 1000);
+  /* Set CTRL_REG1 (0x20)
+   ====================================================================
+   BIT  Symbol    Description                                   Default
+   ---  ------    --------------------------------------------- -------
+   7-6  DR1/0     Output data rate                                   00
+   5-4  BW1/0     Bandwidth selection                                00
+     3  PD        0 = Power-down mode, 1 = normal/sleep mode          0
+     2  ZEN       Z-axis enable (0 = disabled, 1 = enabled)           1
+     1  YEN       Y-axis enable (0 = disabled, 1 = enabled)           1
+     0  XEN       X-axis enable (0 = disabled, 1 = enabled)           1 */
+    Wire.beginTransmission(L3GD20_ADDRESS);
+    Wire.write((byte)L3GD20_REGISTER_CTRL_REG1);
+    Wire.write(0x0F);
+    Wire.endTransmission();
   
-		// re-scale to fractional Gs
-		float xAccel = xScaled / 1000.0;
-		float yAccel = yScaled / 1000.0;
-		float zAccel = zScaled / 1000.0;
-    
-		gyro.read();
-  
-//		Serial.print("ACCEL X: ");
-//		Serial.print(xAccel);
-//		Serial.print("G\tY: ");
-//		Serial.print(yAccel);
-//		Serial.print("G\tZ: ");
-//		Serial.print(zAccel);
-//		Serial.print("G\t");
-//		Serial.print("GYRO X: "); Serial.print((int)gyro.data.x);
-//		Serial.print("\tY: "); Serial.print((int)gyro.data.y);
-//		Serial.println("\tZ: "); Serial.print((int)gyro.data.z);
-
-		MadgwickAHRSupdateIMU(xAccel, yAccel, zAccel, gyro.data.x / 300.0, gyro.data.y / 300.0, gyro.data.z / 300.0);
-
-		Serial.print("Q0: ");
-		Serial.print(q0);
-		Serial.print("\tQ1: ");
-		Serial.print(q1);
-		Serial.print("\tQ2: ");
-		Serial.print(q2);
-		Serial.print("\tQ3: ");
-		Serial.println(q3);
-		delay(100);
-	}
+  /* Set CTRL_REG4 (0x23)
+   ====================================================================
+   BIT  Symbol    Description                                   Default
+   ---  ------    --------------------------------------------- -------
+     7  BDU       Block Data Update (0=continuous, 1=LSB/MSB)         0
+     6  BLE       Big/Little-Endian (0=Data LSB, 1=Data MSB)          0
+   5-4  FS1/0     Full scale selection                               00
+                                  00 = 250 dps
+                                  01 = 500 dps
+                                  10 = 2000 dps
+                                  11 = 2000 dps
+     0  SIM       SPI Mode (0=4-wire, 1=3-wire)                       0 */
+    Wire.beginTransmission(L3GD20_ADDRESS);
+    Wire.write((byte)L3GD20_REGISTER_CTRL_REG4);
+    Wire.write(0x00);
+    Wire.endTransmission();
+  }
 }
 
-//
-// Read "sampleSize" samples and report the average
-//
-int ReadAxis(int axisPin){
-	long reading = 0;
-	analogRead(axisPin);
-	delay(1);
-	for (int i = 0; i < sampleSize; i++){
-		reading += analogRead(axisPin);
-	}
-	return reading/sampleSize;
-}
+void loop(){
+  // int r = analogRead(A0);
+  // Serial.print("A0: ");
+  // Serial.println(r);
+  
 
-//
-// Find the extreme raw readings from each axis
-//
-void AutoCalibrate(int xRaw, int yRaw, int zRaw)
-{
-	Serial.println("Calibrate");
-	if (xRaw < xRawMin) 
-    	xRawMin = xRaw;
-	if (xRaw > xRawMax)
-		xRawMax = xRaw;  
-	if (yRaw < yRawMin)
-		yRawMin = yRaw;
-	if (yRaw > yRawMax)
-		yRawMax = yRaw;
-	if (zRaw < zRawMin)
-		zRawMin = zRaw;
-	if (zRaw > zRawMax)
-		zRawMax = zRaw;
+  // READ L3GD20 GYROSCOPE ON I2C
+  Wire.beginTransmission(L3GD20_ADDRESS);
+  // Make sure to set address auto-increment bit
+  Wire.write(L3GD20_REGISTER_OUT_X_L | 0x80);
+  Wire.endTransmission();
+  Wire.requestFrom((byte)L3GD20_ADDRESS, (byte)6);
+  // Wait around until enough data is available
+  while (Wire.available() < 6);   
+  uint8_t xhi, xlo, ylo, yhi, zlo, zhi;
+  xlo = Wire.read();
+  xhi = Wire.read();
+  ylo = Wire.read();
+  yhi = Wire.read();
+  zlo = Wire.read();
+  zhi = Wire.read();
+  int axisX = (xlo | (xhi << 8));
+  int axisY = (ylo | (yhi << 8));
+  int axisZ = (zlo | (zhi << 8));
+  axisX *= L3GD20_SCALE;
+  axisY *= L3GD20_SCALE;
+  axisZ *= L3GD20_SCALE;
+  
+  Serial.print("X: "); Serial.print(axisX);
+  Serial.print("\t\tY: "); Serial.print(axisY);
+  Serial.print("\t\tZ: "); Serial.println(axisZ);
+//  Serial.print("X: "); Serial.print(xhi, HEX);  Serial.print(xlo, HEX);
+//  Serial.print("\t\tY: "); Serial.print(yhi, HEX);  Serial.print(ylo, HEX);
+//  Serial.print("\t\tZ: "); Serial.print(zhi, HEX);  Serial.println(zlo, HEX);
+
+
+//  MadgwickAHRSupdateIMU(xAccel, yAccel, zAccel, gyro.data.x / 300.0, gyro.data.y / 300.0, gyro.data.z / 300.0);
+
+
+  delay(100);
 }
