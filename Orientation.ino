@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include <math.h>
 
+#define DEG_RAD 0.01745329251994
+
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
 
@@ -16,7 +18,9 @@ float invSqrt(float x) {
 
 // Implementation of Madgwick's IMU and AHRS algorithms.
 // See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
-#define sampleFreq  512.0f    // sample frequency in Hz
+// #define sampleFreq  512.0f    // sample frequency in Hz
+
+float sampleFreq = 512.0f;  // updates dynamically every second (based on the last second) inside loop()
 #define betaDef   0.1f    // 2 * proportional gain
 
 volatile float beta = betaDef;                // 2 * proportional gain (Kp)
@@ -92,12 +96,14 @@ void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, flo
 
 
 
-// bits of acode from L3GD20 library by KTOWN for Adafruit
+// bits of acode from L3GD20 library by Kevin Townshend for Adafruit
 
 #define L3GD20_ADDRESS                (0x6B)        // 1101011
 #define L3GD20_ID                     0xD4
 #define L3GD20H_ID                    0xD7
-#define L3GD20_SCALE                  0.00875f  // mdps/LSB
+#define L3GD20_SCALE                  0.00875f  // mdps/LSB   // 250 dps 
+//#define L3GD20_SCALE                  0.0175f  // mdps/LSB   // 500 dps 
+//#define L3GD20_SCALE                  0.07f  // mdps/LSB      // 2000 dps
 
 typedef enum
 {                                               // DEFAULT    TYPE
@@ -133,7 +139,7 @@ void setup(){
   pinMode(A0, INPUT);
   Serial.begin(9600);
   Wire.begin();
-  
+
   delay(2000);
   Serial.println("Reqesting ID from I2C");
   Wire.beginTransmission(L3GD20_ADDRESS);
@@ -184,14 +190,15 @@ void setup(){
   }
 }
 
-// loop timing
-unsigned long lastMillis;
-unsigned int sampleCount;
-unsigned int periodCount;
+// smoothing, avg polls over interval
+#define INTERVAL 40 // ms between averaging
+unsigned int smoothingDivider;
 float cumulativeX, cumulativeY, cumulativeZ;
-float avgX, avgY, avgZ;
+float smoothX, smoothY, smoothZ;
 
-#define INTERVAL 100 // ms between averaging
+// dynamic sensor frequency updating
+unsigned int freqCounterRaw = 0;
+unsigned int freqCounterSmooth = 0;
 
 void loop(){
   // int r = analogRead(A0);
@@ -214,31 +221,46 @@ void loop(){
   yhi = Wire.read();
   zlo = Wire.read();
   zhi = Wire.read();
+
   float sampleX = (int)(xlo | (xhi << 8));
   float sampleY = (int)(ylo | (yhi << 8));
   float sampleZ = (int)(zlo | (zhi << 8));
   sampleX *= L3GD20_SCALE;
   sampleY *= L3GD20_SCALE;
   sampleZ *= L3GD20_SCALE;
+  freqCounterRaw++;
   
   // sample smoothing
   cumulativeX += sampleX;
   cumulativeY += sampleY;
   cumulativeZ += sampleZ;
-  sampleCount++;
-  if(millis() > lastMillis + INTERVAL){
-    lastMillis = millis();
-    avgX = cumulativeX/sampleCount;
-    avgY = cumulativeY/sampleCount;
-    avgZ = cumulativeZ/sampleCount;
-    Serial.print(sampleCount);  Serial.print("  ");
-    Serial.print("X: ");        Serial.print(avgX); // Serial.print("  ");  Serial.print(cumulativeX);  
-    Serial.print(" \t\tY: ");   Serial.print(avgY); // Serial.print("  ");  Serial.print(cumulativeY);  
-    Serial.print(" \t\tZ: ");   Serial.println(avgZ); // Serial.print("  ");  Serial.println(cumulativeZ);  
-    sampleCount = cumulativeX = cumulativeY = cumulativeZ = 0;
+  smoothingDivider++;
+
+  static unsigned long smoothMillisPoll = 0;
+  if(millis() > smoothMillisPoll + INTERVAL){
+    smoothMillisPoll = millis();
+
+    smoothX = cumulativeX/smoothingDivider;
+    smoothY = cumulativeY/smoothingDivider;
+    smoothZ = cumulativeZ/smoothingDivider;
+
+    Serial.print("(");          Serial.print(smoothingDivider);
+    Serial.print(") X: ");      Serial.print((int)smoothX);   // Serial.print("  ");  Serial.print(cumulativeX);  
+    Serial.print("\t\tY: ");   Serial.print((int)smoothY);   // Serial.print("  ");  Serial.print(cumulativeY);  
+    Serial.print(" \t\tZ: ");   Serial.println((int)smoothZ); // Serial.print("  ");  Serial.println(cumulativeZ);  
+    smoothingDivider = cumulativeX = cumulativeY = cumulativeZ = 0;
+    freqCounterSmooth++;
+  }
+  static unsigned long freqCalcPoll = 0;
+  if(millis() > freqCalcPoll + 1000){
+    freqCalcPoll = millis();
+    sampleFreq = freqCounterSmooth;
+    freqCounterSmooth = freqCounterRaw = 0;
   }
 
-//  MadgwickAHRSupdateIMU(xAccel, yAccel, zAccel, gyro.data.x / 300.0, gyro.data.y / 300.0, gyro.data.z / 300.0);
+  // accel (XYZ), gyro (XYZ)
+  // MadgwickAHRSupdateIMU(xAccel, yAccel, zAccel, smoothX, smoothY, smoothZ);
+  MadgwickAHRSupdateIMU(0, 0, 0, smoothX * DEG_RAD, smoothY * DEG_RAD, smoothZ * DEG_RAD);
 
   
 //    Serial.print("X: ");        Serial.print(sampleX);  
