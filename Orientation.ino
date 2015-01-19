@@ -137,6 +137,8 @@ typedef enum
 
 void setup(){
   pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  pinMode(A2, INPUT);
   Serial.begin(9600);
   Wire.begin();
 
@@ -190,8 +192,12 @@ void setup(){
   }
 }
 
+float accelX, accelY, accelZ;
+
+#define VOLTS 3.0
+
 // smoothing, avg polls over interval
-#define INTERVAL 40 // ms between averaging
+#define INTERVAL 200 // ms between averaging
 unsigned int smoothingDivider;
 float cumulativeX, cumulativeY, cumulativeZ;
 float smoothX, smoothY, smoothZ;
@@ -200,11 +206,21 @@ float smoothX, smoothY, smoothZ;
 unsigned int freqCounterRaw = 0;
 unsigned int freqCounterSmooth = 0;
 
+//class vec3(){
+//  float x, float y, float z;
+//}
+
 void loop(){
-  // int r = analogRead(A0);
-  // Serial.print("A0: ");
-  // Serial.println(r);
-  
+  int a0 = analogRead(A0);
+  int a1 = analogRead(A1);
+  int a2 = analogRead(A2);
+  accelX = (a0 - 321.5) / 62.5;// / VOLTS / 255.0;  
+  accelY = (a1 - 326.5) / 64.0;// / VOLTS / 255.0;
+  accelZ = (a2 - 330.5) / 64.5;// / VOLTS / 255.0;
+//  accelX = (a0 - 336.5) / 50.5;// / VOLTS / 255.0;  
+//  accelY = (a1 - 319.5) / 61.5;// / VOLTS / 255.0;
+//  accelZ = (a2 - 336.5) / 62.5;// / VOLTS / 255.0;
+
 
   // READ L3GD20 GYROSCOPE ON I2C
   Wire.beginTransmission(L3GD20_ADDRESS);
@@ -244,10 +260,15 @@ void loop(){
     smoothY = cumulativeY/smoothingDivider;
     smoothZ = cumulativeZ/smoothingDivider;
 
-    Serial.print("(");          Serial.print(smoothingDivider);
-    Serial.print(") X: ");      Serial.print((int)smoothX);   // Serial.print("  ");  Serial.print(cumulativeX);  
-    Serial.print("\t\tY: ");   Serial.print((int)smoothY);   // Serial.print("  ");  Serial.print(cumulativeY);  
-    Serial.print(" \t\tZ: ");   Serial.println((int)smoothZ); // Serial.print("  ");  Serial.println(cumulativeZ);  
+//    Serial.print("(");          Serial.print(smoothingDivider);
+//    Serial.print(") X: ");      Serial.print((int)smoothX);   // Serial.print("  ");  Serial.print(cumulativeX);  
+//    Serial.print("\t\tY: ");   Serial.print((int)smoothY);   // Serial.print("  ");  Serial.print(cumulativeY);  
+//    Serial.print(" \t\tZ: ");   Serial.println((int)smoothZ); // Serial.print("  ");  Serial.println(cumulativeZ);  
+
+    Serial.print("\t\tX: ");      Serial.print(accelX);   // Serial.print("  ");  Serial.print(cumulativeX);  
+    Serial.print("\t\tY: ");   Serial.print(accelY);   // Serial.print("  ");  Serial.print(cumulativeY);  
+    Serial.print("\t\tZ: ");   Serial.println(accelZ); // Serial.print("  ");  Serial.println(cumulativeZ);  
+
     smoothingDivider = cumulativeX = cumulativeY = cumulativeZ = 0;
     freqCounterSmooth++;
   }
@@ -260,7 +281,7 @@ void loop(){
 
   // accel (XYZ), gyro (XYZ)
   // MadgwickAHRSupdateIMU(xAccel, yAccel, zAccel, smoothX, smoothY, smoothZ);
-  MadgwickAHRSupdateIMU(0, 0, 0, smoothX * DEG_RAD, smoothY * DEG_RAD, smoothZ * DEG_RAD);
+  MadgwickAHRSupdateIMU(accelX, accelY, accelZ, smoothX * DEG_RAD, smoothY * DEG_RAD, smoothZ * DEG_RAD);
 
   
 //    Serial.print("X: ");        Serial.print(sampleX);  
