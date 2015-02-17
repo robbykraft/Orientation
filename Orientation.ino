@@ -228,12 +228,12 @@ float cumulativeX, cumulativeY, cumulativeZ;
 float smoothX, smoothY, smoothZ;
 
 void loop(){
-	int a0 = analogRead(A0);
-	int a1 = analogRead(A1);
-	int a2 = analogRead(A2);
-	accelX = (a0 - 321.5) / 62.5;// / VOLTS / 255.0;  
-	accelY = (a1 - 326.5) / 64.0;// / VOLTS / 255.0;
-	accelZ = (a2 - 330.5) / 64.5;// / VOLTS / 255.0;
+//	int a0 = analogRead(A0);
+//	int a1 = analogRead(A1);
+//	int a2 = analogRead(A2);
+//	accelX = (a0 - 321.5) / 62.5;// / VOLTS / 255.0;  
+//	accelY = (a1 - 326.5) / 64.0;// / VOLTS / 255.0;
+//	accelZ = (a2 - 330.5) / 64.5;// / VOLTS / 255.0;
 
 	// READ L3GD20 GYROSCOPE ON I2C
 	Wire.beginTransmission(L3GD20_ADDRESS);
@@ -273,24 +273,31 @@ void loop(){
 		smoothZ = cumulativeZ/smoothingDivider;
 		smoothingDivider = cumulativeX = cumulativeY = cumulativeZ = 0;
 	}
+
+
+	if(abs(sampleX) > .1)
+		digitalWrite(13,HIGH);
+	else
+		digitalWrite(13,LOW);
+
 	// accel (XYZ), gyro (XYZ)
 	// MadgwickAHRSupdateIMU(xAccel, yAccel, zAccel, smoothX, smoothY, smoothZ);
-	MadgwickAHRSupdateIMU(sampleX, sampleY, sampleZ, accelX, accelY, accelZ);
+//	MadgwickAHRSupdateIMU(sampleX, sampleY, sampleZ, accelX, accelY, accelZ);
 
-	static unsigned int logCount = 0;
-	logCount++;
-	if(logCount >= 20){
-		logCount = 0;
-		Serial.print("(");	Serial.print(sampleFreq);  
-		Serial.print(")Hz\t(");	Serial.print(smoothX); 
-		Serial.print(", ");	Serial.print(smoothY);
-		Serial.print(", ");	Serial.print(smoothZ);	Serial.print(")");
-		Serial.print("\t\t(");	Serial.print(accelX); 
-		Serial.print(", ");	Serial.print(accelY);
-		Serial.print(", ");	Serial.print(accelZ);	Serial.print(")");
-		Serial.print("\t\tQ(");	Serial.print(q0);  
-		Serial.print(", ");	Serial.print(q1); 
-		Serial.print(", ");	Serial.print(q2);
-		Serial.print(", ");	Serial.print(q3);	Serial.println(")"); 
-	}
+//	static unsigned int logCount = 0;
+//	logCount++;
+//	if(logCount >= 20){
+//		logCount = 0;
+//		Serial.print("(");	Serial.print(sampleFreq);  
+//		Serial.print(")Hz\t(");	Serial.print(smoothX); 
+//		Serial.print(", ");	Serial.print(smoothY);
+//		Serial.print(", ");	Serial.print(smoothZ);	Serial.print(")");
+//		Serial.print("\t\t(");	Serial.print(accelX); 
+//		Serial.print(", ");	Serial.print(accelY);
+//		Serial.print(", ");	Serial.print(accelZ);	Serial.print(")");
+//		Serial.print("\t\tQ(");	Serial.print(q0);  
+//		Serial.print(", ");	Serial.print(q1); 
+//		Serial.print(", ");	Serial.print(q2);
+//		Serial.print(", ");	Serial.print(q3);	Serial.println(")"); 
+//	}
 }
