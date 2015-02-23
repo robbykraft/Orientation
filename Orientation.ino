@@ -3,7 +3,22 @@
 // replace with Wire.h if not using Teensy 3.x
 #include <i2c_t3.h>
 
+#define LED_PIN 13
 #define DEG_RAD 0.01745329251994
+
+// Implementation of Madgwick's IMU and AHRS algorithms.
+// See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
+float sampleFreq = 512.0f;  // updates dynamically every second (based on the last second) inside loop()
+unsigned long lastUpdate = 0, now; // sample period expressed in milliseconds
+
+volatile float integralFBx,  integralFBy, integralFBz;
+#define twoKi  (2.0f * 0.1f) // 2 * integral gain
+#define twoKp  (2.0f * 0.5f) // 2 * proportional gain
+//#define betaDef   0.1f    // 2 * proportional gain
+//volatile float beta = betaDef; // 2 * proportional gain (Kp)
+#define betaDef   0.1f    // 2 * proportional gain
+volatile float beta = betaDef;                // 2 * proportional gain (Kp)
+volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;  // quaternion of sensor frame relative to auxiliary frame
 
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -16,25 +31,6 @@ float invSqrt(float x) {
 	y = y * (1.5f - (halfx * y * y));
 	return y;
 }
-
-// Implementation of Madgwick's IMU and AHRS algorithms.
-// See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
-
-#define betaDef   0.1f    // 2 * proportional gain
-
-volatile float beta = betaDef;                // 2 * proportional gain (Kp)
-volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;  // quaternion of sensor frame relative to auxiliary frame
-
-float sampleFreq = 512.0f;  // updates dynamically every second (based on the last second) inside loop()
-unsigned long lastUpdate = 0, now; // sample period expressed in milliseconds
-
-volatile float integralFBx,  integralFBy, integralFBz;
-
-#define twoKi  (2.0f * 0.1f) // 2 * integral gain
-#define twoKp  (2.0f * 0.5f) // 2 * proportional gain
-//#define betaDef   0.1f    // 2 * proportional gain
-//volatile float beta = betaDef; // 2 * proportional gain (Kp)
-
 void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az) {
 
 	now = micros();
@@ -124,12 +120,12 @@ void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, flo
 
 // bits of acode from L3GD20 library by Kevin Townshend for Adafruit
 
-#define L3GD20_ADDRESS                (0x6B)        // 1101011
+#define L3GD20_ADDRESS                (0x6B)    // 1101011
 #define L3GD20_ID                     0xD4
 #define L3GD20H_ID                    0xD7
 #define L3GD20_SCALE                  0.00875f  // mdps/LSB   // 250 dps 
-//#define L3GD20_SCALE                  0.0175f  // mdps/LSB   // 500 dps 
-//#define L3GD20_SCALE                  0.07f  // mdps/LSB      // 2000 dps
+//#define L3GD20_SCALE                  0.0175f   // mdps/LSB   // 500 dps 
+//#define L3GD20_SCALE                  0.07f     // mdps/LSB   // 2000 dps
 
 #define LSM303_ADDRESS_ACCEL          (0x32 >> 1)         // 0011001x
 #define LSM303_ADDRESS_MAG            (0x3C >> 1)         // 0011110x
@@ -146,16 +142,23 @@ void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, flo
 #define L3GD20_REGISTER_CTRL_REG3      0x22   // 00000000   rw
 #define L3GD20_REGISTER_CTRL_REG4      0x23   // 00000000   rw
 
+void quickBlink(unsigned int times){
+  	delay(250);
+  	for(int i = 0; i < times; i++){
+		digitalWrite(LED_PIN,HIGH); delay(50);
+		digitalWrite(LED_PIN,LOW); delay(50);
+	}
+}
 void setup(){
 
-	pinMode(13,OUTPUT);
+	pinMode(LED_PIN,OUTPUT);
 	pinMode(2,OUTPUT);
 	digitalWrite(2,HIGH);  // power pin, for sensors
 
 //	Serial.begin(9600);
 	Wire.begin();
 
-	delay(2000);
+	delay(1000);
 
 	Wire.beginTransmission(L3GD20_ADDRESS);
 	Wire.write((byte)L3GD20_REGISTER_WHO_AM_I);
@@ -191,18 +194,21 @@ void setup(){
 		Wire.write(0x00);
 		Wire.endTransmission();
 	}
+	quickBlink(1);
 
 	// ACCELEROMETER
 	Wire.beginTransmission(LSM303_ADDRESS_ACCEL);
 	Wire.write(LSM303_REGISTER_ACCEL_CTRL_REG1_A);
 	Wire.write(0x27);
 	Wire.endTransmission();
+	quickBlink(2);
 
 	// MAGNETOMETER
 	Wire.beginTransmission(LSM303_ADDRESS_MAG);
 	Wire.write(LSM303_REGISTER_MAG_MR_REG_M);
 	Wire.write(0x00);
 	Wire.endTransmission();
+	quickBlink(3);
 }
 
 void loop(){
@@ -275,9 +281,9 @@ void loop(){
 	#define LIGHT_THRESH .4
 	float gyroMagnitude = sqrt(gyroX*gyroX + gyroY*gyroY + gyroZ*gyroZ);
 	if(gyroMagnitude > LIGHT_THRESH)
-		digitalWrite(13,HIGH);
+		digitalWrite(LED_PIN,HIGH);
 	else
-		digitalWrite(13,LOW);
+		digitalWrite(LED_PIN,LOW);
 
 	MadgwickAHRSupdateIMU(gyroX, gyroY, gyroZ, accelX, accelY, accelZ);
 
