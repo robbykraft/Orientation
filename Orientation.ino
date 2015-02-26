@@ -1,24 +1,61 @@
+#define WIRE_LIBRARY Wire     // Teensy 3.x, all Arduinos
+//#define WIRE_LIBRARY TinyWireM     // Trinket
+
 #include <math.h>
-// i2c_t3 replacement library for Wire.h
-// replace with Wire.h if not using Teensy 3.x
+#include <SPI.h>
+#include "Adafruit_BLE_UART.h"
+//#include <Wire.h>
+//#include <TinyWireM.h>
 #include <i2c_t3.h>
 
+
+//#define LED_PIN 1  // Trinket
 #define LED_PIN 13
+#define POWER_PIN 3
+
 #define DEG_RAD 0.01745329251994
+// bits of acode from L3GD20 library by Kevin Townshend for Adafruit
+
+#define L3GD20_ADDRESS                (0x6B)    // 1101011
+#define L3GD20_ID                     0xD4
+#define L3GD20H_ID                    0xD7
+#define L3GD20_SCALE                  0.00875f  // mdps/LSB   // 250 dps 
+//#define L3GD20_SCALE                  0.0175f   // mdps/LSB   // 500 dps 
+//#define L3GD20_SCALE                  0.07f     // mdps/LSB   // 2000 dps
+
+#define LSM303_ADDRESS_ACCEL          (0x32 >> 1)         // 0011001x
+#define LSM303_ADDRESS_MAG            (0x3C >> 1)         // 0011110x
+#define LSM303_ID                     (0b11010100)
+#define LSM303_REGISTER_ACCEL_CTRL_REG1_A 0x20
+#define LSM303_REGISTER_MAG_MR_REG_M   0x02
+
+#define LSM303_REGISTER_ACCEL_OUT_X_L_A  0x28
+#define LSM303_REGISTER_MAG_OUT_X_H_M  0x03
+#define L3GD20_REGISTER_OUT_X_L        0x28   //            r
+#define L3GD20_REGISTER_WHO_AM_I       0x0F   // 11010100   r
+#define L3GD20_REGISTER_CTRL_REG1      0x20   // 00000111   rw
+#define L3GD20_REGISTER_CTRL_REG2      0x21   // 00000000   rw
+#define L3GD20_REGISTER_CTRL_REG3      0x22   // 00000000   rw
+#define L3GD20_REGISTER_CTRL_REG4      0x23   // 00000000   rw
+
+// e.g. On UNO & compatible: CLK = 13, MISO = 12, MOSI = 11
+#define ADAFRUITBLE_REQ 10
+#define ADAFRUITBLE_RDY 2     // This should be an interrupt pin, on Uno thats #2 or #3
+#define ADAFRUITBLE_RST 9
+
+Adafruit_BLE_UART BTLEserial = Adafruit_BLE_UART(ADAFRUITBLE_REQ, ADAFRUITBLE_RDY, ADAFRUITBLE_RST);
+aci_evt_opcode_t laststatus = ACI_EVT_DISCONNECTED;
 
 // Implementation of Madgwick's IMU and AHRS algorithms.
 // See: http://www.x-io.co.uk/node/8#open_source_ahrs_and_imu_algorithms
-float sampleFreq = 512.0f;  // updates dynamically every second (based on the last second) inside loop()
-unsigned long lastUpdate = 0, now; // sample period expressed in milliseconds
-
-volatile float integralFBx,  integralFBy, integralFBz;
 #define twoKi  (2.0f * 0.1f) // 2 * integral gain
 #define twoKp  (2.0f * 0.5f) // 2 * proportional gain
-//#define betaDef   0.1f    // 2 * proportional gain
-//volatile float beta = betaDef; // 2 * proportional gain (Kp)
-#define betaDef   0.1f    // 2 * proportional gain
-volatile float beta = betaDef;                // 2 * proportional gain (Kp)
+volatile float integralFBx,  integralFBy, integralFBz;
+volatile float beta = 0.1f;  // 2 * proportional gain (Kp)
 volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;  // quaternion of sensor frame relative to auxiliary frame
+float sampleFreq = 512.0f;  // updates dynamically every second (based on the last second) inside loop()
+unsigned long lastUpdate = 0, now; // sample period expressed in milliseconds
+int8_t q0sent, q1sent, q2sent, q3sent;
 
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -118,30 +155,6 @@ void MadgwickAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, flo
 	q3 *= recipNorm;
 }
 
-// bits of acode from L3GD20 library by Kevin Townshend for Adafruit
-
-#define L3GD20_ADDRESS                (0x6B)    // 1101011
-#define L3GD20_ID                     0xD4
-#define L3GD20H_ID                    0xD7
-#define L3GD20_SCALE                  0.00875f  // mdps/LSB   // 250 dps 
-//#define L3GD20_SCALE                  0.0175f   // mdps/LSB   // 500 dps 
-//#define L3GD20_SCALE                  0.07f     // mdps/LSB   // 2000 dps
-
-#define LSM303_ADDRESS_ACCEL          (0x32 >> 1)         // 0011001x
-#define LSM303_ADDRESS_MAG            (0x3C >> 1)         // 0011110x
-#define LSM303_ID                     (0b11010100)
-#define LSM303_REGISTER_ACCEL_CTRL_REG1_A 0x20
-#define LSM303_REGISTER_MAG_MR_REG_M   0x02
-
-#define LSM303_REGISTER_ACCEL_OUT_X_L_A  0x28
-#define LSM303_REGISTER_MAG_OUT_X_H_M  0x03
-#define L3GD20_REGISTER_OUT_X_L        0x28   //            r
-#define L3GD20_REGISTER_WHO_AM_I       0x0F   // 11010100   r
-#define L3GD20_REGISTER_CTRL_REG1      0x20   // 00000111   rw
-#define L3GD20_REGISTER_CTRL_REG2      0x21   // 00000000   rw
-#define L3GD20_REGISTER_CTRL_REG3      0x22   // 00000000   rw
-#define L3GD20_REGISTER_CTRL_REG4      0x23   // 00000000   rw
-
 void quickBlink(unsigned int times){
   	delay(250);
   	for(int i = 0; i < times; i++){
@@ -152,20 +165,23 @@ void quickBlink(unsigned int times){
 void setup(){
 
 	pinMode(LED_PIN,OUTPUT);
-	pinMode(2,OUTPUT);
-	digitalWrite(2,HIGH);  // power pin, for sensors
+	pinMode(POWER_PIN,OUTPUT);
+	digitalWrite(POWER_PIN,HIGH);  // power pin, for sensors
+
+	SPI.setSCK(14);
 
 //	Serial.begin(9600);
-	Wire.begin();
+	WIRE_LIBRARY.begin();
+	BTLEserial.begin();
 
 	delay(1000);
 
-	Wire.beginTransmission(L3GD20_ADDRESS);
-	Wire.write((byte)L3GD20_REGISTER_WHO_AM_I);
-	Wire.endTransmission();
-	Wire.requestFrom((byte)L3GD20_ADDRESS, (byte)1);
-	byte value = Wire.read();
-	Wire.endTransmission();
+	WIRE_LIBRARY.beginTransmission(L3GD20_ADDRESS);
+	WIRE_LIBRARY.write((byte)L3GD20_REGISTER_WHO_AM_I);
+	WIRE_LIBRARY.endTransmission();
+	WIRE_LIBRARY.requestFrom((byte)L3GD20_ADDRESS, (byte)1);
+	byte value = WIRE_LIBRARY.read();
+	WIRE_LIBRARY.endTransmission();
 	uint8_t id = value;
 	if ((id != L3GD20_ID) && (id != L3GD20H_ID)) {
 //		Serial.println("STOP. NOT CORRECT DEVICE");
@@ -179,35 +195,35 @@ void setup(){
 		 2  ZEN       Z-axis enable (0 = disabled, 1 = enabled)           1
 		 1  YEN       Y-axis enable (0 = disabled, 1 = enabled)           1
 		 0  XEN       X-axis enable (0 = disabled, 1 = enabled)           1 */
-		Wire.beginTransmission(L3GD20_ADDRESS);
-		Wire.write((byte)L3GD20_REGISTER_CTRL_REG1);
-		Wire.write(0x0F);
-		Wire.endTransmission();
+		WIRE_LIBRARY.beginTransmission(L3GD20_ADDRESS);
+		WIRE_LIBRARY.write((byte)L3GD20_REGISTER_CTRL_REG1);
+		WIRE_LIBRARY.write(0x0F);
+		WIRE_LIBRARY.endTransmission();
 		/* Set CTRL_REG4 (0x23)
 		 BIT  Symbol    Description                                   Default
 		 7  BDU       Block Data Update (0=continuous, 1=LSB/MSB)         0
 		 6  BLE       Big/Little-Endian (0=Data LSB, 1=Data MSB)          0
 		 5-4  FS1/0     Full scale selection                              00
 		 0  SIM       SPI Mode (0=4-Wire, 1=3-Wire)                       0 */
-		Wire.beginTransmission(L3GD20_ADDRESS);
-		Wire.write((byte)L3GD20_REGISTER_CTRL_REG4);
-		Wire.write(0x00);
-		Wire.endTransmission();
+		WIRE_LIBRARY.beginTransmission(L3GD20_ADDRESS);
+		WIRE_LIBRARY.write((byte)L3GD20_REGISTER_CTRL_REG4);
+		WIRE_LIBRARY.write(0x00);
+		WIRE_LIBRARY.endTransmission();
 	}
 	quickBlink(1);
 
 	// ACCELEROMETER
-	Wire.beginTransmission(LSM303_ADDRESS_ACCEL);
-	Wire.write(LSM303_REGISTER_ACCEL_CTRL_REG1_A);
-	Wire.write(0x27);
-	Wire.endTransmission();
+	WIRE_LIBRARY.beginTransmission(LSM303_ADDRESS_ACCEL);
+	WIRE_LIBRARY.write(LSM303_REGISTER_ACCEL_CTRL_REG1_A);
+	WIRE_LIBRARY.write(0x27);
+	WIRE_LIBRARY.endTransmission();
 	quickBlink(2);
 
 	// MAGNETOMETER
-	Wire.beginTransmission(LSM303_ADDRESS_MAG);
-	Wire.write(LSM303_REGISTER_MAG_MR_REG_M);
-	Wire.write(0x00);
-	Wire.endTransmission();
+	WIRE_LIBRARY.beginTransmission(LSM303_ADDRESS_MAG);
+	WIRE_LIBRARY.write(LSM303_REGISTER_MAG_MR_REG_M);
+	WIRE_LIBRARY.write(0x00);
+	WIRE_LIBRARY.endTransmission();
 	quickBlink(3);
 }
 
@@ -221,19 +237,19 @@ void loop(){
 
 	uint8_t xhi, xlo, ylo, yhi, zlo, zhi;
 	// GYROSCOPE
-	Wire.beginTransmission(L3GD20_ADDRESS);
+	WIRE_LIBRARY.beginTransmission(L3GD20_ADDRESS);
 	// Make sure to set address auto-increment bit
-	Wire.write(L3GD20_REGISTER_OUT_X_L | 0x80);
-	Wire.endTransmission();
-	Wire.requestFrom((byte)L3GD20_ADDRESS, (byte)6);
+	WIRE_LIBRARY.write(L3GD20_REGISTER_OUT_X_L | 0x80);
+	WIRE_LIBRARY.endTransmission();
+	WIRE_LIBRARY.requestFrom((byte)L3GD20_ADDRESS, (byte)6);
 	// Wait around until enough data is available
-	while (Wire.available() < 6);   
-	xlo = Wire.read();
-	xhi = Wire.read();
-	ylo = Wire.read();
-	yhi = Wire.read();
-	zlo = Wire.read();
-	zhi = Wire.read();
+	while (WIRE_LIBRARY.available() < 6);   
+	xlo = WIRE_LIBRARY.read();
+	xhi = WIRE_LIBRARY.read();
+	ylo = WIRE_LIBRARY.read();
+	yhi = WIRE_LIBRARY.read();
+	zlo = WIRE_LIBRARY.read();
+	zhi = WIRE_LIBRARY.read();
 	float gyroX = (int16_t)(xlo | (xhi << 8));
 	float gyroY = (int16_t)(ylo | (yhi << 8));
 	float gyroZ = (int16_t)(zlo | (zhi << 8));
@@ -242,48 +258,53 @@ void loop(){
 	gyroZ *= L3GD20_SCALE * DEG_RAD;  // * 0.125
 
 	// ACCELEROMETER
-	Wire.beginTransmission((byte)LSM303_ADDRESS_ACCEL);
-	Wire.write(LSM303_REGISTER_ACCEL_OUT_X_L_A | 0x80);
-	Wire.endTransmission();
-	Wire.requestFrom((byte)LSM303_ADDRESS_ACCEL, (byte)6);
+	WIRE_LIBRARY.beginTransmission((byte)LSM303_ADDRESS_ACCEL);
+	WIRE_LIBRARY.write(LSM303_REGISTER_ACCEL_OUT_X_L_A | 0x80);
+	WIRE_LIBRARY.endTransmission();
+	WIRE_LIBRARY.requestFrom((byte)LSM303_ADDRESS_ACCEL, (byte)6);
 	// Wait around until enough data is available
-	while (Wire.available() < 6);
-	xlo = Wire.read();
-	xhi = Wire.read();
-	ylo = Wire.read();
-	yhi = Wire.read();
-	zlo = Wire.read();
-	zhi = Wire.read();
+	while (WIRE_LIBRARY.available() < 6);
+	xlo = WIRE_LIBRARY.read();
+	xhi = WIRE_LIBRARY.read();
+	ylo = WIRE_LIBRARY.read();
+	yhi = WIRE_LIBRARY.read();
+	zlo = WIRE_LIBRARY.read();
+	zhi = WIRE_LIBRARY.read();
 	float accelX = (int16_t)(xlo | (xhi << 8)) / 16500.0;
 	float accelY = (int16_t)(ylo | (yhi << 8)) / 16500.0;
 	float accelZ = (int16_t)(zlo | (zhi << 8)) / 16500.0;
 
 	// MAGNETOMETER
-	Wire.beginTransmission((byte)LSM303_ADDRESS_MAG);
-	Wire.write(LSM303_REGISTER_MAG_OUT_X_H_M);
-	Wire.endTransmission();
-	Wire.requestFrom((byte)LSM303_ADDRESS_MAG, (byte)6);
+	WIRE_LIBRARY.beginTransmission((byte)LSM303_ADDRESS_MAG);
+	WIRE_LIBRARY.write(LSM303_REGISTER_MAG_OUT_X_H_M);
+	WIRE_LIBRARY.endTransmission();
+	WIRE_LIBRARY.requestFrom((byte)LSM303_ADDRESS_MAG, (byte)6);
 	// Wait around until enough data is available
-	while (Wire.available() < 6);
+	while (WIRE_LIBRARY.available() < 6);
 	// Note high before low
-	xhi = Wire.read();
-	xlo = Wire.read();
-	zhi = Wire.read();
-	zlo = Wire.read();
-	yhi = Wire.read();
-	ylo = Wire.read();
+	xhi = WIRE_LIBRARY.read();
+	xlo = WIRE_LIBRARY.read();
+	zhi = WIRE_LIBRARY.read();
+	zlo = WIRE_LIBRARY.read();
+	yhi = WIRE_LIBRARY.read();
+	ylo = WIRE_LIBRARY.read();
 	// Shift values to create properly formed integer (low byte first)
 	float magDataX = (int16_t)(xlo | (xhi << 8));
 	float magDataY = (int16_t)(ylo | (yhi << 8));
 	float magDataZ = (int16_t)(zlo | (zhi << 8)); 
 
 	// ONBOARD LIGHT WHEN MOVING
-	#define LIGHT_THRESH .4
+	#define LIGHT_THRESH .2
+	static unsigned char LED_STATE = 0;
 	float gyroMagnitude = sqrt(gyroX*gyroX + gyroY*gyroY + gyroZ*gyroZ);
-	if(gyroMagnitude > LIGHT_THRESH)
+	if(!LED_STATE && gyroMagnitude > LIGHT_THRESH){
 		digitalWrite(LED_PIN,HIGH);
-	else
+		LED_STATE = 1;
+	}
+	else if (LED_STATE && gyroMagnitude <= LIGHT_THRESH) {
 		digitalWrite(LED_PIN,LOW);
+		LED_STATE = 0;
+	}
 
 	MadgwickAHRSupdateIMU(gyroX, gyroY, gyroZ, accelX, accelY, accelZ);
 
@@ -304,4 +325,75 @@ void loop(){
 //		Serial.print(", ");	Serial.print(q2);
 //		Serial.print(", ");	Serial.print(q3);	Serial.println(")"); 
 //	}
+
+
+	// Tell the nRF8001 to do whatever it should be working on.
+	BTLEserial.pollACI();
+
+	// Ask what is our current status
+	aci_evt_opcode_t status = BTLEserial.getState();
+	// If the status changed....
+	if (status != laststatus) {
+		// print it out!
+		if (status == ACI_EVT_DEVICE_STARTED) {
+			Serial.println(F("* Advertising started"));
+		}
+		if (status == ACI_EVT_CONNECTED) {
+			Serial.println(F("* Connected!"));
+		}
+		if (status == ACI_EVT_DISCONNECTED) {
+			Serial.println(F("* Disconnected or advertising timed out"));
+		}
+		// OK set the last status change to this one
+		laststatus = status;
+	}
+
+	int8_t q0min = q0 * 128;
+	int8_t q1min = q1 * 128;
+	int8_t q2min = q2 * 128;
+	int8_t q3min = q3 * 128;
+
+	if (status == ACI_EVT_CONNECTED) {
+		if(q0min != q0sent || q1min != q1sent || q2min != q2sent || q3min != q3sent){
+			q0sent = q0min;  q1sent = q1min;  q2sent = q2min;  q3sent = q3min;
+			uint8_t sendbuffer[4];
+			sendbuffer[0] = q1min;
+			sendbuffer[1] = q2min;
+			sendbuffer[2] = q3min;
+			sendbuffer[3] = q0min;
+			char sendbuffersize = 4;
+			BTLEserial.write(sendbuffer, sendbuffersize);
+//digitalWrite(LED_PIN,HIGH);
+		}
+//else{
+//digitalWrite(LED_PIN,LOW);
+//}
+		// Lets see if there's any data for us!
+		if (BTLEserial.available()) {
+			Serial.print("* "); Serial.print(BTLEserial.available()); Serial.println(F(" bytes available from BTLE"));
+		}
+		// OK while we still have something to read, get a character and print it out
+		while (BTLEserial.available()) {
+			char c = BTLEserial.read();
+			Serial.print(c);
+		}
+
+		// Next up, see if we have any data to get from the Serial console
+
+		if (Serial.available()) {
+			// Read a line from Serial
+			Serial.setTimeout(100); // 100 millisecond timeout
+			String s = Serial.readString();
+
+			// We need to convert the line to bytes, no more than 20 at this time
+			uint8_t sendbuffer[20];
+			s.getBytes(sendbuffer, 20);
+			char sendbuffersize = min(20, s.length());
+
+			Serial.print(F("\n* Sending -> \"")); Serial.print((char *)sendbuffer); Serial.println("\"");
+
+			// write the data
+			BTLEserial.write(sendbuffer, sendbuffersize);
+		}
+	}
 }
