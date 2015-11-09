@@ -227,6 +227,8 @@ void setup(){
 	quickBlink(3);
 }
 
+static unsigned int counter = 0;
+
 void loop(){
 //	int a0 = analogRead(A0);
 //	int a1 = analogRead(A1);
@@ -294,25 +296,33 @@ void loop(){
 	float magDataZ = (int16_t)(zlo | (zhi << 8)); 
 
 	// ONBOARD LIGHT WHEN MOVING
-	#define LIGHT_THRESH .2
-	static unsigned char LED_STATE = 0;
-	float gyroMagnitude = sqrt(gyroX*gyroX + gyroY*gyroY + gyroZ*gyroZ);
-	if(!LED_STATE && gyroMagnitude > LIGHT_THRESH){
-		digitalWrite(LED_PIN,HIGH);
-		LED_STATE = 1;
-	}
-	else if (LED_STATE && gyroMagnitude <= LIGHT_THRESH) {
-		digitalWrite(LED_PIN,LOW);
-		LED_STATE = 0;
-	}
+//	#define LIGHT_THRESH .2
+//	static unsigned char LED_STATE = 0;
+//	float gyroMagnitude = sqrt(gyroX*gyroX + gyroY*gyroY + gyroZ*gyroZ);
+//	if(!LED_STATE && gyroMagnitude > LIGHT_THRESH){
+//		digitalWrite(LED_PIN,HIGH);
+//		LED_STATE = 1;
+//	}
+//	else if (LED_STATE && gyroMagnitude <= LIGHT_THRESH) {
+//		digitalWrite(LED_PIN,LOW);
+//		LED_STATE = 0;
+//	}
 
 	MadgwickAHRSupdateIMU(gyroX, gyroY, gyroZ, accelX, accelY, accelZ);
 
+	if(q1 > 0.5)
+		digitalWrite(LED_PIN, HIGH);
+	else
+		digitalWrite(LED_PIN, LOW);
 //	LOG
+//	counter++;
 //	#define LOG_INTERVAL 333  // milliseconds
 //	static unsigned long logLastMillis = 0;
-//	if(millis() > logLastMillis + INTERVAL){
+//	if(millis() > logLastMillis + LOG_INTERVAL){
 //		logLastMillis = millis();
+//		Serial.println(counter);
+//		counter = 0;
+//	}
 //		Serial.print("(");	Serial.print(sampleFreq);  
 //		Serial.print(")Hz\t(");	Serial.print(gyroX); 
 //		Serial.print(", ");	Serial.print(gyroY);
