@@ -1,0 +1,112 @@
+#N canvas 73 170 450 374 10;
+#X declare -lib mrpeach;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array1 200 float 2;
+#X coords 0 256 200 0 200 75 1 0 0;
+#X restore 8 18 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array2 200 float 2;
+#X coords 0 256 200 0 200 75 1 0 0;
+#X restore 8 108 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array3 200 float 2;
+#X coords 0 256 200 0 200 75 1 0 0;
+#X restore 8 197 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array4 200 float 2;
+#X coords 0 256 200 0 200 75 1 0 0;
+#X restore 8 286 graph;
+#N canvas 776 408 450 300 guts 0;
+#X msg 7 4 connect localhost 12345;
+#X obj 7 75 udpsend;
+#X obj 13 55 packOSC;
+#X msg 13 38 send /test \$1;
+#X floatatom 13 22 5 0 0 0 - - -;
+#X obj 173 53 unpackOSC;
+#X obj 173 72 OSCroute /quaternion;
+#X obj 167 7 udpreceive 7000;
+#X obj 238 171 vsl 15 64 0 256 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 74 1;
+#X obj 256 171 vsl 15 64 0 256 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 197 1;
+#X obj 273 171 vsl 15 64 0 256 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 3125 1;
+#X obj 290 171 vsl 15 64 0 256 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 148 1;
+#X obj 172 91 OSCroute /x /y /z /w;
+#X obj 167 27 t b b a;
+#X obj 130 161 tabwrite array1;
+#X obj 130 180 tabwrite array2;
+#X obj 130 199 tabwrite array3;
+#X obj 130 218 tabwrite array4;
+#X obj 217 140 % 1000;
+#X obj 104 52 i;
+#X obj 128 52 + 1;
+#X obj 250 118 r _d_arr_size;
+#X obj 353 6 import mrpeach;
+#X msg 6 224 \; array1 resize \$1 \; array2 resize \$1 \; array3 resize
+\$1 \; array4 resize \$1;
+#X obj 26 204 s _d_arr_size;
+#X msg 21 183 200;
+#X obj 20 144 s flex1;
+#X obj 74 144 s flex2;
+#X obj 33 103 OSCroute /flex;
+#X obj 33 122 OSCroute /1 /2;
+#X obj 300 73 OSCroute /accelerometer;
+#X obj 301 95 OSCroute /x /y /z;
+#X obj 327 162 s accelX;
+#X obj 327 183 s accelY;
+#X obj 327 204 s accelZ;
+#X connect 0 0 1 0;
+#X connect 2 0 1 0;
+#X connect 3 0 2 0;
+#X connect 4 0 3 0;
+#X connect 5 0 6 0;
+#X connect 5 0 28 0;
+#X connect 5 0 30 0;
+#X connect 6 0 12 0;
+#X connect 7 0 13 0;
+#X connect 12 0 8 0;
+#X connect 12 0 14 0;
+#X connect 12 1 9 0;
+#X connect 12 1 15 0;
+#X connect 12 2 10 0;
+#X connect 12 2 16 0;
+#X connect 12 3 11 0;
+#X connect 12 3 17 0;
+#X connect 13 1 19 0;
+#X connect 13 2 5 0;
+#X connect 18 0 14 1;
+#X connect 18 0 15 1;
+#X connect 18 0 16 1;
+#X connect 18 0 17 1;
+#X connect 19 0 20 0;
+#X connect 19 0 18 0;
+#X connect 20 0 19 1;
+#X connect 21 0 18 1;
+#X connect 25 0 23 0;
+#X connect 25 0 24 0;
+#X connect 28 0 29 0;
+#X connect 29 0 26 0;
+#X connect 29 1 27 0;
+#X connect 30 0 31 0;
+#X connect 31 0 32 0;
+#X connect 31 1 33 0;
+#X connect 31 2 34 0;
+#X restore 378 342 pd guts;
+#X obj 286 91 vsl 15 128 0 256 0 0 empty flex1 empty 0 -9 0 10 -262144
+-1 -1 11906 1;
+#X obj 256 93 vsl 15 128 0 256 0 0 empty flex2 empty 0 -9 0 10 -262144
+-1 -1 10368 1;
+#X obj 349 59 vsl 15 128 0 255 0 0 empty accelX empty 0 -9 0 10 -262144
+-1 -1 6674 1;
+#X obj 367 59 vsl 15 128 0 255 0 0 empty accelY empty 0 -9 0 10 -262144
+-1 -1 7022 1;
+#X obj 385 59 vsl 15 128 0 255 0 0 empty accelZ empty 0 -9 0 10 -262144
+-1 -1 12650 1;
+#X floatatom 347 217 5 0 0 0 - - -;
+#X floatatom 359 195 5 0 0 0 - - -;
+#X floatatom 384 216 5 0 0 0 - - -;
+#X connect 7 0 10 0;
+#X connect 8 0 11 0;
+#X connect 9 0 12 0;

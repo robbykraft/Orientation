@@ -1,17 +1,23 @@
 # orientation
 
-orientation awareness on minimal hardware, as cheap as possible and open source, for aeronautics or human interface devices
+### orientation awareness on minimal hardware, minimal cost, open source
 
-# algorithm
+Bluetooth-low energy communicating quaternion orientation, raw accelerometer data, and any extra sensors (flex sensors for glove).
 
-Sebastian Madgwick's IMU and AHRS
+# software
 
-# sensors
+* Xcode project receives Bluetooth LE signal, outputs OSC over localhost
+* Puredata patch receives OSC signals
 
+# hardware
+
+* Arduino (Atmel AVR) *or* Teensy 3.X (ARM Cortex)
 * gyroscope L3GD20H
 * accelerometer + magnetometer LSM303
+* Adafruit nRF8001 Bluetooth LE
 
-# platforms
+# thanks
 
-* Arduino (Atmel AVR)
-* Teensy 3.X (ARM Cortex)
+Sebastian Madgwick's IMU and AHRS functions
+Adafruit nRF8001 BLE library
+Paul Stoffregen's 32bit ARM updates

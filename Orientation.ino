@@ -12,6 +12,10 @@
 //#define LED_PIN 1  // Trinket
 #define LED_PIN 13
 #define POWER_PIN 3
+#define FLEX_1_PIN 17
+#define FLEX_2_PIN 16
+#define FLEX_3_PIN 15
+
 
 #define DEG_RAD 0.01745329251994
 // bits of acode from L3GD20 library by Kevin Townshend for Adafruit
@@ -53,9 +57,17 @@ aci_evt_opcode_t laststatus = ACI_EVT_DISCONNECTED;
 volatile float integralFBx,  integralFBy, integralFBz;
 volatile float beta = 0.1f;  // 2 * proportional gain (Kp)
 volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;  // quaternion of sensor frame relative to auxiliary frame
-float sampleFreq = 512.0f;  // updates dynamically every second (based on the last second) inside loop()
+float sampleFreq = 512.0f;  // value updates dynamically every second (based on the last second) inside loop()
 unsigned long lastUpdate = 0, now; // sample period expressed in milliseconds
-int8_t q0sent, q1sent, q2sent, q3sent;
+int flex1, flex1Min, flex1Max;
+int flex2, flex2Min, flex2Max;
+int8_t q0sent, q1sent, q2sent, q3sent, accelXsent, accelYsent, accelZsent, flex1sent, flex2sent;
+
+const int smoothingNumber = 3;
+int flex1values[smoothingNumber];
+int flex2values[smoothingNumber];
+int flex1valuesTotal, flex2valuesTotal;
+int smoothingIndex;
 
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -166,6 +178,17 @@ void setup(){
 
 	pinMode(LED_PIN,OUTPUT);
 	pinMode(POWER_PIN,OUTPUT);
+
+	pinMode(FLEX_1_PIN, INPUT);
+	pinMode(FLEX_2_PIN, INPUT);
+	pinMode(FLEX_3_PIN, INPUT);
+
+	for(int i = 0; i < smoothingNumber; i++){
+		flex1values[i] = 0;
+		flex2values[i] = 0;
+	}
+
+
 	digitalWrite(POWER_PIN,HIGH);  // power pin, for sensors
 
 	SPI.setSCK(14);
@@ -225,11 +248,41 @@ void setup(){
 	WIRE_LIBRARY.write(0x00);
 	WIRE_LIBRARY.endTransmission();
 	quickBlink(3);
+
+	// FLEX SENSORS
+	flex1 = analogRead(FLEX_1_PIN);
+	flex2 = analogRead(FLEX_2_PIN);
+	flex1Min = flex1;
+	flex1Max = flex1;
+	flex2Min = flex2;
+	flex2Max = flex2;
+	quickBlink(4);
 }
 
 static unsigned int counter = 0;
 
 void loop(){
+//  	flex1 = analogRead(FLEX_1_PIN);
+//	flex2 = analogRead(FLEX_2_PIN);
+	flex1valuesTotal = flex1valuesTotal - flex1values[smoothingIndex];
+	flex2valuesTotal = flex2valuesTotal - flex2values[smoothingIndex];
+  	flex1values[smoothingIndex] = analogRead(FLEX_1_PIN);
+	flex2values[smoothingIndex] = analogRead(FLEX_2_PIN);
+	flex1valuesTotal = flex1valuesTotal + flex1values[smoothingIndex];
+	flex2valuesTotal = flex2valuesTotal + flex2values[smoothingIndex];
+	flex1 = (float)flex1valuesTotal / (float)smoothingNumber;
+	flex2 = (float)flex2valuesTotal / (float)smoothingNumber;
+	smoothingIndex = (smoothingIndex + 1) % smoothingNumber;
+
+	if(flex1 < flex1Min)
+		flex1Min = flex1;
+	if(flex1 > flex1Max)
+		flex1Max = flex1;
+	if(flex2 < flex2Min)
+		flex2Min = flex2;
+	if(flex2 > flex2Max)
+		flex2Max = flex2;
+
 //	int a0 = analogRead(A0);
 //	int a1 = analogRead(A1);
 //	int a2 = analogRead(A2);
@@ -358,23 +411,85 @@ void loop(){
 		laststatus = status;
 	}
 
-	int8_t q0min = q0 * 128;
-	int8_t q1min = q1 * 128;
-	int8_t q2min = q2 * 128;
-	int8_t q3min = q3 * 128;
+	int8_t q0char = q0 * 128;
+	int8_t q1char = q1 * 128;
+	int8_t q2char = q2 * 128;
+	int8_t q3char = q3 * 128;
+
+	int8_t flex1char = map(flex1, flex1Min, flex1Max, 0, 255);
+	int8_t flex2char = map(flex2, flex2Min, flex2Max, 0, 255);
+
+	float aXc = (accelX + 1.0) * 128;
+	float aYc = (accelY + 1.0) * 128;
+	float aZc = (accelZ + 1.0) * 128;
+	if(aXc > 255) aXc = 255; if(aXc < 0.0) aXc = 0.0;
+	if(aYc > 255) aYc = 255; if(aYc < 0.0) aYc = 0.0;
+	if(aZc > 255) aZc = 255; if(aZc < 0.0) aZc = 0.0;
+	int8_t accelXchar = aXc; //map(accelX, -1.0, 1.0, 0, 255);
+	int8_t accelYchar = aYc; //map(accelY, -1.0, 1.0, 0, 255);
+	int8_t accelZchar = aZc; //map(accelZ, -1.0, 1.0, 0, 255);
+//	int8_t accelXchar = (accelX + 1.0) * 128; //map(accelX, -1.0, 1.0, 0, 255);
+//	int8_t accelYchar = (accelY + 1.0) * 128; //map(accelY, -1.0, 1.0, 0, 255);
+//	int8_t accelZchar = (accelZ + 1.0) * 128; //map(accelZ, -1.0, 1.0, 0, 255);
 
 	if (status == ACI_EVT_CONNECTED) {
-		if(q0min != q0sent || q1min != q1sent || q2min != q2sent || q3min != q3sent){
-			q0sent = q0min;  q1sent = q1min;  q2sent = q2min;  q3sent = q3min;
-			uint8_t sendbuffer[4];
-			sendbuffer[0] = q1min;
-			sendbuffer[1] = q2min;
-			sendbuffer[2] = q3min;
-			sendbuffer[3] = q0min;
-			char sendbuffersize = 4;
-			BTLEserial.write(sendbuffer, sendbuffersize);
-//digitalWrite(LED_PIN,HIGH);
+		boolean quaternionUpdateRequired = false;
+		boolean accelerometerUpdateRequired = false;
+		boolean flexSensorsUpdateRequired = false;
+		if(q0char != q0sent || q1char != q1sent || q2char != q2sent || q3char != q3sent){
+			quaternionUpdateRequired = true;
 		}
+		if(accelX != accelXsent || accelY != accelYsent){
+			accelerometerUpdateRequired = true;
+		}
+		if(flex1 != flex1sent || flex2 != flex2sent){
+			flexSensorsUpdateRequired = true;
+		}
+		if(quaternionUpdateRequired || accelerometerUpdateRequired || flexSensorsUpdateRequired){
+			q0sent = q0char;  q1sent = q1char;  q2sent = q2char;  q3sent = q3char;
+			accelXsent = accelXchar;  accelYsent = accelYchar;  accelZsent = accelZchar;
+			flex1sent = flex1char;  flex2sent = flex2char;
+			uint8_t sendbuffer[9];
+			sendbuffer[0] = q1char;
+			sendbuffer[1] = q2char;
+			sendbuffer[2] = q3char;
+			sendbuffer[3] = q0char;
+			sendbuffer[4] = accelXchar;
+			sendbuffer[5] = accelYchar;
+			sendbuffer[6] = accelZchar;
+			sendbuffer[7] = flex1char;
+			sendbuffer[8] = flex2char;
+			char sendbuffersize = 9;
+			BTLEserial.write(sendbuffer, sendbuffersize);
+		}
+//		else if(quaternionUpdateRequired){
+//			q0sent = q0char;  q1sent = q1char;  q2sent = q2char;  q3sent = q3char;
+//			uint8_t sendbuffer[4];
+//			sendbuffer[0] = q1char;
+//			sendbuffer[1] = q2char;
+//			sendbuffer[2] = q3char;
+//			sendbuffer[3] = q0char;
+//// DOES THIS NEED TO BE UNSIGNED CHAR?
+//			char sendbuffersize = 4;
+//			BTLEserial.write(sendbuffer, sendbuffersize);
+//		}
+//		else if(flexSensorsUpdateRequired){
+//			flex1sent = flex1char;  flex2sent = flex2char;
+//			uint8_t sendbuffer[2];
+//			sendbuffer[0] = flex1char;
+//			sendbuffer[1] = flex2char;
+//			char sendbuffersize = 2;
+//			BTLEserial.write(sendbuffer, sendbuffersize);
+//		}
+//		else if(accelerometerUpdateRequired){
+//			accelXsent = accelXchar;  accelYsent = accelYchar;  accelZsent = accelZchar;
+//			uint8_t sendbuffer[3];
+//			sendbuffer[0] = accelXchar;
+//			sendbuffer[1] = accelYchar;
+//			sendbuffer[2] = accelZchar;
+//			char sendbuffersize = 3;
+//			BTLEserial.write(sendbuffer, sendbuffersize);
+//		}
 //else{
 //digitalWrite(LED_PIN,LOW);
 //}
