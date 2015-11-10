@@ -36,18 +36,18 @@
     bleManager = [[BLEManager alloc] initWithDelegate:self];
     
     
-    char buffer[OUTPUT_BUFFER_SIZE];
-    osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
-    UdpTransmitSocket transmitSocket( IpEndpointName( ADDRESS, PORT ) );
-  
-    p << osc::BeginBundleImmediate
-    << osc::BeginMessage( "/test1" )
-    << true << 23 << (float)3.1415 << "let's" << osc::EndMessage
-    << osc::BeginMessage( "/test2" )
-    << true << 24 << (float)10.8 << "go!" << osc::EndMessage
-    << osc::EndBundle;
-    
-    transmitSocket.Send( p.Data(), p.Size() );
+//    char buffer[OUTPUT_BUFFER_SIZE];
+//    osc::OutboundPacketStream p( buffer, OUTPUT_BUFFER_SIZE );
+//    UdpTransmitSocket transmitSocket( IpEndpointName( ADDRESS, PORT ) );
+//  
+//    p << osc::BeginBundleImmediate
+//    << osc::BeginMessage( "/test1" )
+//    << true << 23 << (float)3.1415 << "let's" << osc::EndMessage
+//    << osc::BeginMessage( "/test2" )
+//    << true << 24 << (float)10.8 << "go!" << osc::EndMessage
+//    << osc::EndBundle;
+//    
+//    transmitSocket.Send( p.Data(), p.Size() );
 
 }
 
@@ -114,7 +114,7 @@
     if(state == BLEConnectionStateDisconnected){
         // if we just disconnected from a device
         if(scanClockLoop == nil){
-            NSLog(@"disconnected from hoverpad");// %@",[_peripheral name]]];
+            NSLog(@"disconnected from BLE device");// %@",[_peripheral name]]];
         }
         // if scanning ended unsuccessfully
         else if(scanClockLoop){
@@ -137,11 +137,11 @@
             [scanClockLoop invalidate];
             scanClockLoop = nil;
         }
-        NSLog(@"connected to hoverpad");//%@",[_peripheral name]]];
+        NSLog(@"connected to BLE device");//%@",[_peripheral name]]];
     }
 }
 -(void) characteristicDidUpdate:(NSData *)data{
-    NSLog(@"%@",data);
+//    NSLog(@"%@",data);
     
     if(data.length == 9){
         unsigned char *msg = (unsigned char*)[data bytes];

@@ -1,13 +1,14 @@
 # orientation
 
-### orientation awareness on minimal hardware, minimal cost, open source
+### orientation awareness, minimal hardware, minimal cost, open source
 
-Bluetooth-low energy communicating quaternion orientation, raw accelerometer data, and any extra sensors (flex sensors for glove).
+1. Bluetooth-low energy communicates quaternion orientation, raw accelerometer data, any extra sensors (flex sensors for glove)
+2. Mac app converts BLE data into OSC commands over localhost for use with Puredata, MaxMSP, Ableton...
 
 # software
 
-* Xcode project receives Bluetooth LE signal, outputs OSC over localhost
-* Puredata patch receives OSC signals
+* Mac OS X app, converts BLE to OSC
+* Puredata example patch
 
 # hardware
 
@@ -18,6 +19,7 @@ Bluetooth-low energy communicating quaternion orientation, raw accelerometer dat
 
 # thanks
 
-Sebastian Madgwick's IMU and AHRS functions
-Adafruit nRF8001 BLE library
-Paul Stoffregen's 32bit ARM updates
+* Sebastian Madgwick's IMU and AHRS functions
+* Adafruit nRF8001 BLE library
+* Paul Stoffregen's 32bit ARM updates
+* Ross Bencina and OSCPack

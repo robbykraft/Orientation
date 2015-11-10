@@ -1,22 +1,6 @@
-#N canvas 73 170 450 374 10;
+#N canvas 344 96 450 374 10;
 #X declare -lib mrpeach;
-#N canvas 0 22 450 278 (subpatch) 0;
-#X array array1 200 float 2;
-#X coords 0 256 200 0 200 75 1 0 0;
-#X restore 8 18 graph;
-#N canvas 0 22 450 278 (subpatch) 0;
-#X array array2 200 float 2;
-#X coords 0 256 200 0 200 75 1 0 0;
-#X restore 8 108 graph;
-#N canvas 0 22 450 278 (subpatch) 0;
-#X array array3 200 float 2;
-#X coords 0 256 200 0 200 75 1 0 0;
-#X restore 8 197 graph;
-#N canvas 0 22 450 278 (subpatch) 0;
-#X array array4 200 float 2;
-#X coords 0 256 200 0 200 75 1 0 0;
-#X restore 8 286 graph;
-#N canvas 776 408 450 300 guts 0;
+#N canvas 760 209 450 300 guts 0;
 #X msg 7 4 connect localhost 12345;
 #X obj 7 75 udpsend;
 #X obj 13 55 packOSC;
@@ -25,24 +9,15 @@
 #X obj 173 53 unpackOSC;
 #X obj 173 72 OSCroute /quaternion;
 #X obj 167 7 udpreceive 7000;
-#X obj 238 171 vsl 15 64 0 256 0 0 empty empty empty 0 -9 0 10 -262144
--1 -1 74 1;
-#X obj 256 171 vsl 15 64 0 256 0 0 empty empty empty 0 -9 0 10 -262144
--1 -1 197 1;
-#X obj 273 171 vsl 15 64 0 256 0 0 empty empty empty 0 -9 0 10 -262144
--1 -1 3125 1;
-#X obj 290 171 vsl 15 64 0 256 0 0 empty empty empty 0 -9 0 10 -262144
--1 -1 148 1;
 #X obj 172 91 OSCroute /x /y /z /w;
 #X obj 167 27 t b b a;
-#X obj 130 161 tabwrite array1;
-#X obj 130 180 tabwrite array2;
-#X obj 130 199 tabwrite array3;
-#X obj 130 218 tabwrite array4;
-#X obj 217 140 % 1000;
+#X obj 186 215 tabwrite array1;
+#X obj 186 234 tabwrite array2;
+#X obj 186 253 tabwrite array3;
+#X obj 186 272 tabwrite array4;
 #X obj 104 52 i;
 #X obj 128 52 + 1;
-#X obj 250 118 r _d_arr_size;
+#X obj 245 154 r _d_arr_size;
 #X obj 353 6 import mrpeach;
 #X msg 6 224 \; array1 resize \$1 \; array2 resize \$1 \; array3 resize
 \$1 \; array4 resize \$1;
@@ -52,61 +27,118 @@
 #X obj 74 144 s flex2;
 #X obj 33 103 OSCroute /flex;
 #X obj 33 122 OSCroute /1 /2;
-#X obj 300 73 OSCroute /accelerometer;
-#X obj 301 95 OSCroute /x /y /z;
-#X obj 327 162 s accelX;
-#X obj 327 183 s accelY;
-#X obj 327 204 s accelZ;
+#X obj 300 40 OSCroute /accelerometer;
+#X obj 301 62 OSCroute /x /y /z;
+#X obj 379 88 s accelX;
+#X obj 379 109 s accelY;
+#X obj 379 130 s accelZ;
+#X obj 242 181 % 200;
+#X obj 329 155 tabwrite array5;
+#X obj 329 175 tabwrite array6;
+#X obj 329 195 tabwrite array7;
+#X obj 131 116 s orientationX;
+#X obj 131 137 s orientationY;
+#X obj 131 158 s orientationZ;
+#X obj 131 179 s orientationW;
 #X connect 0 0 1 0;
 #X connect 2 0 1 0;
 #X connect 3 0 2 0;
 #X connect 4 0 3 0;
 #X connect 5 0 6 0;
-#X connect 5 0 28 0;
-#X connect 5 0 30 0;
-#X connect 6 0 12 0;
-#X connect 7 0 13 0;
-#X connect 12 0 8 0;
-#X connect 12 0 14 0;
-#X connect 12 1 9 0;
-#X connect 12 1 15 0;
-#X connect 12 2 10 0;
-#X connect 12 2 16 0;
-#X connect 12 3 11 0;
-#X connect 12 3 17 0;
-#X connect 13 1 19 0;
-#X connect 13 2 5 0;
-#X connect 18 0 14 1;
-#X connect 18 0 15 1;
-#X connect 18 0 16 1;
-#X connect 18 0 17 1;
-#X connect 19 0 20 0;
-#X connect 19 0 18 0;
-#X connect 20 0 19 1;
-#X connect 21 0 18 1;
-#X connect 25 0 23 0;
-#X connect 25 0 24 0;
-#X connect 28 0 29 0;
-#X connect 29 0 26 0;
-#X connect 29 1 27 0;
-#X connect 30 0 31 0;
-#X connect 31 0 32 0;
-#X connect 31 1 33 0;
-#X connect 31 2 34 0;
-#X restore 378 342 pd guts;
-#X obj 286 91 vsl 15 128 0 256 0 0 empty flex1 empty 0 -9 0 10 -262144
--1 -1 11906 1;
-#X obj 256 93 vsl 15 128 0 256 0 0 empty flex2 empty 0 -9 0 10 -262144
--1 -1 10368 1;
-#X obj 349 59 vsl 15 128 0 255 0 0 empty accelX empty 0 -9 0 10 -262144
--1 -1 6674 1;
-#X obj 367 59 vsl 15 128 0 255 0 0 empty accelY empty 0 -9 0 10 -262144
--1 -1 7022 1;
-#X obj 385 59 vsl 15 128 0 255 0 0 empty accelZ empty 0 -9 0 10 -262144
--1 -1 12650 1;
-#X floatatom 347 217 5 0 0 0 - - -;
-#X floatatom 359 195 5 0 0 0 - - -;
-#X floatatom 384 216 5 0 0 0 - - -;
-#X connect 7 0 10 0;
-#X connect 8 0 11 0;
-#X connect 9 0 12 0;
+#X connect 5 0 23 0;
+#X connect 5 0 25 0;
+#X connect 6 0 8 0;
+#X connect 7 0 9 0;
+#X connect 8 0 10 0;
+#X connect 8 0 34 0;
+#X connect 8 1 11 0;
+#X connect 8 1 35 0;
+#X connect 8 2 12 0;
+#X connect 8 2 36 0;
+#X connect 8 3 13 0;
+#X connect 8 3 37 0;
+#X connect 9 1 14 0;
+#X connect 9 2 5 0;
+#X connect 14 0 15 0;
+#X connect 14 0 30 0;
+#X connect 15 0 14 1;
+#X connect 16 0 30 1;
+#X connect 20 0 18 0;
+#X connect 20 0 19 0;
+#X connect 23 0 24 0;
+#X connect 24 0 21 0;
+#X connect 24 1 22 0;
+#X connect 25 0 26 0;
+#X connect 26 0 27 0;
+#X connect 26 0 31 0;
+#X connect 26 1 28 0;
+#X connect 26 1 32 0;
+#X connect 26 2 29 0;
+#X connect 26 2 33 0;
+#X connect 30 0 10 1;
+#X connect 30 0 11 1;
+#X connect 30 0 12 1;
+#X connect 30 0 13 1;
+#X connect 30 0 31 1;
+#X connect 30 0 32 1;
+#X connect 30 0 33 1;
+#X restore 381 350 pd guts;
+#N canvas 517 94 452 405 graphs 0;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array5 200 float 2;
+#X coords 0 256 200 0 150 75 1 0 0;
+#X restore 252 49 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array6 200 float 2;
+#X coords 0 256 200 0 150 75 1 0 0;
+#X restore 252 139 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array7 200 float 2;
+#X coords 0 256 200 0 150 75 1 0 0;
+#X restore 252 229 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array1 200 float 2;
+#X coords 0 256 200 0 200 75 1 0 0;
+#X restore 9 51 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array2 200 float 2;
+#X coords 0 256 200 0 200 75 1 0 0;
+#X restore 9 141 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array3 200 float 2;
+#X coords 0 256 200 0 200 75 1 0 0;
+#X restore 9 230 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array array4 200 float 2;
+#X coords 0 256 200 0 200 75 1 0 0;
+#X restore 9 319 graph;
+#X text 68 14 quaternion;
+#X text 285 12 accelerometer;
+#X restore 196 338 pd graphs;
+#X obj 59 151 cnv 15 120 175 empty empty empty 20 12 0 14 -233017 -66577
+0;
+#X obj 83 176 vsl 15 128 0 255 0 0 empty orientationX empty 0 -9 0
+10 -262144 -1 -1 199 1;
+#X obj 101 176 vsl 15 128 0 255 0 0 empty orientationY empty 0 -9 0
+10 -262144 -1 -1 448 1;
+#X obj 119 176 vsl 15 128 0 255 0 0 empty orientationZ empty 0 -9 0
+10 -262144 -1 -1 2042 1;
+#X obj 137 176 vsl 15 128 0 255 0 0 empty orientationW empty 0 -9 0
+10 -262144 -1 -1 6773 1;
+#X obj 130 37 cnv 15 180 75 empty empty empty 20 12 0 14 -233017 -66577
+0;
+#X obj 276 152 cnv 15 90 175 empty empty empty 20 12 0 14 -233017 -66577
+0;
+#X obj 155 77 hsl 128 15 256 0 0 0 empty flex2 empty -2 -8 0 10 -262144
+-1 -1 2480 1;
+#X obj 155 55 hsl 128 15 256 0 0 0 empty flex1 empty -2 -8 0 10 -262144
+-1 -1 893 1;
+#X obj 296 176 vsl 15 128 0 255 0 0 empty accelX empty 0 -9 0 10 -262144
+-1 -1 7122 1;
+#X obj 314 176 vsl 15 128 0 255 0 0 empty accelY empty 0 -9 0 10 -262144
+-1 -1 6375 1;
+#X obj 332 176 vsl 15 128 0 255 0 0 empty accelZ empty 0 -9 0 10 -262144
+-1 -1 12700 1;
+#X text 183 15 finger flex;
+#X text 81 131 quaternion;
+#X text 282 132 accelerometer;
