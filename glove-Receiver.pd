@@ -1,6 +1,6 @@
-#N canvas 344 96 450 374 10;
+#N canvas 149 191 450 374 10;
 #X declare -lib mrpeach;
-#N canvas 760 209 450 300 guts 0;
+#N canvas 589 197 452 462 guts 0;
 #X msg 7 4 connect localhost 12345;
 #X obj 7 75 udpsend;
 #X obj 13 55 packOSC;
@@ -11,10 +11,10 @@
 #X obj 167 7 udpreceive 7000;
 #X obj 172 91 OSCroute /x /y /z /w;
 #X obj 167 27 t b b a;
-#X obj 186 215 tabwrite array1;
-#X obj 186 234 tabwrite array2;
-#X obj 186 253 tabwrite array3;
-#X obj 186 272 tabwrite array4;
+#X obj 184 205 tabwrite array1;
+#X obj 184 224 tabwrite array2;
+#X obj 184 243 tabwrite array3;
+#X obj 184 262 tabwrite array4;
 #X obj 104 52 i;
 #X obj 128 52 + 1;
 #X obj 245 154 r _d_arr_size;
@@ -40,6 +40,45 @@
 #X obj 131 137 s orientationY;
 #X obj 131 158 s orientationZ;
 #X obj 131 179 s orientationW;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array dAccelXStore 3 float 2;
+#X coords 0 255 3 0 20 60 1 0 0;
+#X restore 319 332 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array dAccelYStore 3 float 2;
+#X coords 0 255 3 0 20 60 1 0 0;
+#X restore 345 343 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array dAccelZStore 3 float 2;
+#X coords 0 255 3 0 20 60 1 0 0;
+#X restore 371 356 graph;
+#X obj 404 230 % 3;
+#X obj 289 255 tabwrite dAccelXStore;
+#X obj 299 275 tabwrite dAccelYStore;
+#X obj 309 296 tabwrite dAccelZStore;
+#X obj 12 369 -;
+#X obj 153 262 - 1;
+#X obj 217 303 r accelX;
+#X obj 237 343 r accelZ;
+#X obj 153 282 % 3;
+#X obj 211 345 f;
+#X obj 225 366 f;
+#X obj 126 241 t b f;
+#X obj 52 310 tabread dAccelXStore;
+#X obj 199 326 f;
+#X obj 63 330 tabread dAccelYStore;
+#X obj 72 352 tabread dAccelZStore;
+#X obj 37 373 -;
+#X obj 64 374 -;
+#X obj 20 428 s dAccelX;
+#X obj 94 427 s dAccelY;
+#X obj 163 432 s dAccelZ;
+#X obj 228 323 r accelY;
+#X obj 142 400 smooth;
+#X obj 68 399 smooth;
+#X obj 209 397 smooth;
+#X msg 267 391 0.9;
+#X obj 70 78 s ble_clock;
 #X connect 0 0 1 0;
 #X connect 2 0 1 0;
 #X connect 3 0 2 0;
@@ -57,10 +96,13 @@
 #X connect 8 2 36 0;
 #X connect 8 3 13 0;
 #X connect 8 3 37 0;
+#X connect 9 0 52 0;
 #X connect 9 1 14 0;
+#X connect 9 1 67 0;
 #X connect 9 2 5 0;
 #X connect 14 0 15 0;
 #X connect 14 0 30 0;
+#X connect 14 0 41 0;
 #X connect 15 0 14 1;
 #X connect 16 0 30 1;
 #X connect 20 0 18 0;
@@ -71,10 +113,13 @@
 #X connect 25 0 26 0;
 #X connect 26 0 27 0;
 #X connect 26 0 31 0;
+#X connect 26 0 42 0;
 #X connect 26 1 28 0;
 #X connect 26 1 32 0;
+#X connect 26 1 43 0;
 #X connect 26 2 29 0;
 #X connect 26 2 33 0;
+#X connect 26 2 44 0;
 #X connect 30 0 10 1;
 #X connect 30 0 11 1;
 #X connect 30 0 12 1;
@@ -82,8 +127,37 @@
 #X connect 30 0 31 1;
 #X connect 30 0 32 1;
 #X connect 30 0 33 1;
+#X connect 41 0 42 1;
+#X connect 41 0 43 1;
+#X connect 41 0 44 1;
+#X connect 45 0 59 0;
+#X connect 46 0 49 0;
+#X connect 47 0 54 1;
+#X connect 48 0 51 1;
+#X connect 49 0 53 0;
+#X connect 49 0 55 0;
+#X connect 49 0 56 0;
+#X connect 50 0 57 0;
+#X connect 51 0 58 0;
+#X connect 52 0 54 0;
+#X connect 52 0 50 0;
+#X connect 52 0 51 0;
+#X connect 52 1 46 0;
+#X connect 53 0 45 1;
+#X connect 54 0 45 0;
+#X connect 55 0 57 1;
+#X connect 56 0 58 1;
+#X connect 57 0 60 0;
+#X connect 58 0 61 0;
+#X connect 62 0 50 1;
+#X connect 63 0 60 0;
+#X connect 64 0 59 0;
+#X connect 65 0 61 0;
+#X connect 66 0 63 1;
+#X connect 66 0 65 1;
+#X connect 66 0 64 1;
 #X restore 381 350 pd guts;
-#N canvas 517 94 452 405 graphs 0;
+#N canvas 807 46 452 405 graphs 0;
 #N canvas 0 22 450 278 (subpatch) 0;
 #X array array5 200 float 2;
 #X coords 0 256 200 0 150 75 1 0 0;
@@ -114,31 +188,157 @@
 #X restore 9 319 graph;
 #X text 68 14 quaternion;
 #X text 285 12 accelerometer;
-#X restore 196 338 pd graphs;
-#X obj 59 151 cnv 15 120 175 empty empty empty 20 12 0 14 -233017 -66577
+#X restore 377 327 pd graphs;
+#X obj 39 81 cnv 15 120 175 empty empty empty 20 12 0 14 -233017 -66577
 0;
-#X obj 83 176 vsl 15 128 0 255 0 0 empty orientationX empty 0 -9 0
-10 -262144 -1 -1 199 1;
-#X obj 101 176 vsl 15 128 0 255 0 0 empty orientationY empty 0 -9 0
-10 -262144 -1 -1 448 1;
-#X obj 119 176 vsl 15 128 0 255 0 0 empty orientationZ empty 0 -9 0
-10 -262144 -1 -1 2042 1;
-#X obj 137 176 vsl 15 128 0 255 0 0 empty orientationW empty 0 -9 0
-10 -262144 -1 -1 6773 1;
-#X obj 130 37 cnv 15 180 75 empty empty empty 20 12 0 14 -233017 -66577
+#X obj 63 106 vsl 15 128 0 255 0 0 empty orientationX empty 0 -9 0
+10 -262144 -1 -1 12302 1;
+#X obj 81 106 vsl 15 128 0 255 0 0 empty orientationY empty 0 -9 0
+10 -262144 -1 -1 1444 1;
+#X obj 99 106 vsl 15 128 0 255 0 0 empty orientationZ empty 0 -9 0
+10 -262144 -1 -1 7670 1;
+#X obj 117 106 vsl 15 128 0 255 0 0 empty orientationW empty 0 -9 0
+10 -262144 -1 -1 9264 1;
+#X obj 197 35 cnv 15 180 75 empty empty empty 20 12 0 14 -233017 -66577
 0;
-#X obj 276 152 cnv 15 90 175 empty empty empty 20 12 0 14 -233017 -66577
+#X obj 197 146 cnv 15 90 175 empty empty empty 20 12 0 14 -233017 -66577
 0;
-#X obj 155 77 hsl 128 15 256 0 0 0 empty flex2 empty -2 -8 0 10 -262144
--1 -1 2480 1;
-#X obj 155 55 hsl 128 15 256 0 0 0 empty flex1 empty -2 -8 0 10 -262144
--1 -1 893 1;
-#X obj 296 176 vsl 15 128 0 255 0 0 empty accelX empty 0 -9 0 10 -262144
--1 -1 7122 1;
-#X obj 314 176 vsl 15 128 0 255 0 0 empty accelY empty 0 -9 0 10 -262144
--1 -1 6375 1;
-#X obj 332 176 vsl 15 128 0 255 0 0 empty accelZ empty 0 -9 0 10 -262144
--1 -1 12700 1;
-#X text 183 15 finger flex;
-#X text 81 131 quaternion;
-#X text 282 132 accelerometer;
+#X obj 222 75 hsl 128 15 256 0 0 0 empty flex2 empty -2 -8 0 10 -262144
+-1 -1 7640 1;
+#X obj 222 53 hsl 128 15 256 0 0 0 empty flex1 empty -2 -8 0 10 -262144
+-1 -1 8086 1;
+#X obj 217 170 vsl 15 128 0 255 0 0 empty accelX empty 0 -9 0 10 -262144
+-1 -1 9015 1;
+#X obj 235 170 vsl 15 128 0 255 0 0 empty accelY empty 0 -9 0 10 -262144
+-1 -1 4582 1;
+#X obj 253 170 vsl 15 128 0 255 0 0 empty accelZ empty 0 -9 0 10 -262144
+-1 -1 11654 1;
+#X text 250 13 finger flex;
+#X text 61 61 quaternion;
+#X text 203 126 accelerometer;
+#X obj 298 146 cnv 15 90 175 empty empty empty 20 12 0 14 -233017 -66577
+0;
+#X obj 318 170 vsl 15 128 -50 50 0 0 empty dAccelX empty 0 -9 0 10
+-262144 -1 -1 6350 1;
+#X obj 336 170 vsl 15 128 -50 50 0 0 empty dAccelY empty 0 -9 0 10
+-262144 -1 -1 6350 1;
+#X obj 354 170 vsl 15 128 -50 50 0 0 empty dAccelZ empty 0 -9 0 10
+-262144 -1 -1 6350 1;
+#X text 297 126 d accelerometer;
+#X obj 79 340 noteout;
+#X obj 68 318 makenote 3.2 1000;
+#X msg 84 275 40 100;
+#N canvas 354 351 450 300 hitter 0;
+#X obj 201 38 inlet;
+#X obj 207 214 outlet;
+#X obj 167 95 < 127;
+#X obj 169 136 sel 1;
+#X obj 236 140 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 214 148 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X obj 238 95 f;
+#X obj 168 117 expr $f1 != $f2;
+#X obj 202 73 t f b;
+#X obj 206 178 sel 1;
+#X connect 0 0 8 0;
+#X connect 2 0 7 0;
+#X connect 2 0 6 1;
+#X connect 3 0 4 0;
+#X connect 3 0 5 0;
+#X connect 5 0 9 0;
+#X connect 6 0 7 1;
+#X connect 7 0 3 0;
+#X connect 8 0 2 0;
+#X connect 8 1 6 0;
+#X connect 9 0 1 0;
+#X restore 19 259 pd hitter;
+#N canvas 354 351 450 300 hitter 0;
+#X obj 201 38 inlet;
+#X obj 207 214 outlet;
+#X obj 167 95 < 127;
+#X obj 169 136 sel 1;
+#X obj 236 140 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 214 148 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X obj 238 95 f;
+#X obj 168 117 expr $f1 != $f2;
+#X obj 202 73 t f b;
+#X obj 206 178 sel 1;
+#X connect 0 0 8 0;
+#X connect 2 0 7 0;
+#X connect 2 0 6 1;
+#X connect 3 0 4 0;
+#X connect 3 0 5 0;
+#X connect 5 0 9 0;
+#X connect 6 0 7 1;
+#X connect 7 0 3 0;
+#X connect 8 0 2 0;
+#X connect 8 1 6 0;
+#X connect 9 0 1 0;
+#X restore 19 279 pd hitter;
+#X msg 82 296 36 100;
+#N canvas 628 23 521 657 store 0;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array store_accelX 50000 float 0;
+#X coords 0 255 49999 0 200 140 1 0 0;
+#X restore 18 30 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array store_accelY 50000 float 0;
+#X coords 0 255 49999 0 200 140 1 0 0;
+#X restore 21 197 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array store_accelZ 50000 float 0;
+#X coords 0 255 49999 0 200 140 1 0 0;
+#X restore 18 371 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array store_daccelX 50000 float 0;
+#X coords 0 50 49999 -50 200 140 1 0 0;
+#X restore 256 34 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array store_daccelY 50000 float 0;
+#X coords 0 50 49999 -50 200 140 1 0 0;
+#X restore 257 201 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array store_daccelZ 50000 float 0;
+#X coords 0 50 49999 -50 200 140 1 0 0;
+#X restore 254 375 graph;
+#X obj 21 580 tabwrite store_accelX;
+#X obj 200 518 r ble_clock;
+#X obj 201 539 cup;
+#X msg 237 540 0;
+#X obj 31 517 r accelX;
+#X obj 32 599 tabwrite store_accelY;
+#X obj 44 622 tabwrite store_accelZ;
+#X obj 42 536 r accelY;
+#X obj 53 555 r accelZ;
+#X obj 298 523 r dAccelX;
+#X obj 320 561 r dAccelZ;
+#X obj 288 586 tabwrite store_daccelX;
+#X obj 299 605 tabwrite store_daccelY;
+#X obj 311 628 tabwrite store_daccelZ;
+#X floatatom 234 607 5 0 0 0 - - -;
+#X obj 309 542 r dAccelY;
+#X connect 7 0 8 0;
+#X connect 8 0 6 1;
+#X connect 8 0 11 1;
+#X connect 8 0 12 1;
+#X connect 8 0 17 1;
+#X connect 8 0 18 1;
+#X connect 8 0 19 1;
+#X connect 8 0 20 0;
+#X connect 9 0 8 0;
+#X connect 10 0 6 0;
+#X connect 13 0 11 0;
+#X connect 14 0 12 0;
+#X connect 15 0 17 0;
+#X connect 16 0 19 0;
+#X connect 21 0 18 0;
+#X restore 395 31 pd store;
+#X connect 23 0 22 0;
+#X connect 23 1 22 1;
+#X connect 24 0 23 0;
+#X connect 25 0 24 0;
+#X connect 26 0 27 0;
+#X connect 27 0 23 0;

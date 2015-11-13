@@ -63,11 +63,21 @@ int flex1, flex1Min, flex1Max;
 int flex2, flex2Min, flex2Max;
 int8_t q0sent, q1sent, q2sent, q3sent, accelXsent, accelYsent, accelZsent, flex1sent, flex2sent;
 
-const int smoothingNumber = 3;
-int flex1values[smoothingNumber];
-int flex2values[smoothingNumber];
+// flex sensor smoothing
+const int flexSmoothingNumber = 3;
+int flex1values[flexSmoothingNumber];
+int flex2values[flexSmoothingNumber];
 int flex1valuesTotal, flex2valuesTotal;
-int smoothingIndex;
+int flexSmoothingIndex;
+
+// accelerometer smoothing
+const int accelSmoothingNumber = 3;
+float accelXValues[accelSmoothingNumber];
+float accelYValues[accelSmoothingNumber];
+float accelZValues[accelSmoothingNumber];
+float accelXValuesTotal, accelYValuesTotal, accelZValuesTotal;
+int accelSmoothingIndex;
+
 
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -183,9 +193,14 @@ void setup(){
 	pinMode(FLEX_2_PIN, INPUT);
 	pinMode(FLEX_3_PIN, INPUT);
 
-	for(int i = 0; i < smoothingNumber; i++){
+	for(int i = 0; i < accelSmoothingNumber; i++){
 		flex1values[i] = 0;
 		flex2values[i] = 0;
+	}
+	for(int i = 0; i < accelSmoothingNumber; i++){
+		accelXValues[i] = 0;
+		accelYValues[i] = 0;
+		accelZValues[i] = 0;
 	}
 
 
@@ -264,15 +279,15 @@ static unsigned int counter = 0;
 void loop(){
 //  	flex1 = analogRead(FLEX_1_PIN);
 //	flex2 = analogRead(FLEX_2_PIN);
-	flex1valuesTotal = flex1valuesTotal - flex1values[smoothingIndex];
-	flex2valuesTotal = flex2valuesTotal - flex2values[smoothingIndex];
-  	flex1values[smoothingIndex] = analogRead(FLEX_1_PIN);
-	flex2values[smoothingIndex] = analogRead(FLEX_2_PIN);
-	flex1valuesTotal = flex1valuesTotal + flex1values[smoothingIndex];
-	flex2valuesTotal = flex2valuesTotal + flex2values[smoothingIndex];
-	flex1 = (float)flex1valuesTotal / (float)smoothingNumber;
-	flex2 = (float)flex2valuesTotal / (float)smoothingNumber;
-	smoothingIndex = (smoothingIndex + 1) % smoothingNumber;
+	flex1valuesTotal = flex1valuesTotal - flex1values[flexSmoothingIndex];
+	flex2valuesTotal = flex2valuesTotal - flex2values[flexSmoothingIndex];
+  	flex1values[flexSmoothingIndex] = analogRead(FLEX_1_PIN);
+	flex2values[flexSmoothingIndex] = analogRead(FLEX_2_PIN);
+	flex1valuesTotal = flex1valuesTotal + flex1values[flexSmoothingIndex];
+	flex2valuesTotal = flex2valuesTotal + flex2values[flexSmoothingIndex];
+	flex1 = (float)flex1valuesTotal / (float)flexSmoothingNumber;
+	flex2 = (float)flex2valuesTotal / (float)flexSmoothingNumber;
+	flexSmoothingIndex = (flexSmoothingIndex + 1) % flexSmoothingNumber;
 
 	if(flex1 < flex1Min)
 		flex1Min = flex1;
@@ -325,9 +340,25 @@ void loop(){
 	yhi = WIRE_LIBRARY.read();
 	zlo = WIRE_LIBRARY.read();
 	zhi = WIRE_LIBRARY.read();
-	float accelX = (int16_t)(xlo | (xhi << 8)) / 16500.0;
-	float accelY = (int16_t)(ylo | (yhi << 8)) / 16500.0;
-	float accelZ = (int16_t)(zlo | (zhi << 8)) / 16500.0;
+//	float accelXread = (int16_t)(xlo | (xhi << 8)) / 16500.0;
+//	float accelYread = (int16_t)(ylo | (yhi << 8)) / 16500.0;
+//	float accelZread = (int16_t)(zlo | (zhi << 8)) / 16500.0;
+
+// accelerometer smoothing
+	accelXValuesTotal = accelXValuesTotal - accelXValues[accelSmoothingIndex];
+	accelYValuesTotal = accelYValuesTotal - accelYValues[accelSmoothingIndex];
+	accelZValuesTotal = accelZValuesTotal - accelZValues[accelSmoothingIndex];
+	accelXValues[accelSmoothingIndex] = (int16_t)(xlo | (xhi << 8)) / 16500.0;
+  	accelYValues[accelSmoothingIndex] = (int16_t)(ylo | (yhi << 8)) / 16500.0;
+  	accelZValues[accelSmoothingIndex] = (int16_t)(zlo | (zhi << 8)) / 16500.0;
+	accelXValuesTotal = accelXValuesTotal + accelXValues[accelSmoothingIndex];
+	accelYValuesTotal = accelYValuesTotal + accelYValues[accelSmoothingIndex];
+	accelZValuesTotal = accelZValuesTotal + accelZValues[accelSmoothingIndex];
+	float accelX = (float)accelXValuesTotal / (float)accelSmoothingNumber;
+	float accelY = (float)accelYValuesTotal / (float)accelSmoothingNumber;
+	float accelZ = (float)accelZValuesTotal / (float)accelSmoothingNumber;
+	accelSmoothingIndex = (accelSmoothingIndex + 1) % accelSmoothingNumber;
+
 
 	// MAGNETOMETER
 	WIRE_LIBRARY.beginTransmission((byte)LSM303_ADDRESS_MAG);
